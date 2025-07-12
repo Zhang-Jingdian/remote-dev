@@ -1,10 +1,27 @@
-version: '3.8'
 services:
   dev:
-    image: python:3.11      # 换成你要的镜像，如 node:18、openjdk:17
-    volumes:
-      - ./src:/workspace
-    working_dir: /workspace
+    image: python:3.11
     command: sleep infinity
     ports:
-      - "8000:8000"         # 如果需要运行 Web 服务就暴露端口
+      - "8000:8000"
+    volumes:
+      # 使用相对路径，支持本地和远程开发
+      - .:/workspace
+      # 持久化Python包缓存
+      - python_cache:/root/.cache/pip
+    working_dir: /workspace
+    environment:
+      - PYTHONPATH=/workspace
+      - PYTHONUNBUFFERED=1
+    # 网络配置，方便远程访问
+    networks:
+      - dev-network
+
+# 定义数据卷
+volumes:
+  python_cache:
+
+    # 定义网络
+networks:
+  dev-network:
+    driver: bridge

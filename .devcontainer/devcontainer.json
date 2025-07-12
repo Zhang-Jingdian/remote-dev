@@ -1,12 +1,45 @@
 {
-  "name": "Local Remote Dev",
-  "dockerComposeFile": ["../docker-compose.yml"],
+  "name": "Remote Python Dev Environment",
+  "dockerComposeFile": [
+    "../docker-compose.yml"
+  ],
   "service": "dev",
   "workspaceFolder": "/workspace",
+  // VS Code 扩展
   "extensions": [
-    "ms-python.python"      // Python 示例，换成你需要的插件
+    "ms-python.python",
+    "ms-python.vscode-pylance",
+    "ms-python.black-formatter",
+    "ms-python.isort",
+    "ms-python.flake8",
+    "ms-vscode.vscode-json",
+    "redhat.vscode-yaml"
   ],
+  // VS Code 设置
   "settings": {
-    "terminal.integrated.shell.linux": "/bin/bash"
-  }
+    "terminal.integrated.shell.linux": "/bin/bash",
+    "python.defaultInterpreterPath": "/usr/local/bin/python",
+    "python.linting.enabled": true,
+    "python.linting.pylintEnabled": false,
+    "python.linting.flake8Enabled": true,
+    "python.formatting.provider": "black",
+    "editor.formatOnSave": true
+  },
+  // 端口转发
+  "forwardPorts": [
+    8000
+  ],
+  "portsAttributes": {
+    "8000": {
+      "label": "Application",
+      "onAutoForward": "notify"
+    }
+  },
+  // 容器启动后执行的命令
+  "postCreateCommand": "pip install --upgrade pip",
+  // 开发容器功能 (暂时禁用以解决网络问题)
+  // "features": {
+  //   "ghcr.io/devcontainers/features/git:1": {},
+  //   "ghcr.io/devcontainers/features/github-cli:1": {}
+  // }
 }
