@@ -1,0 +1,10 @@
+version: '3.8'
+services:
+  dev:
+    image: python:3.11      # 换成你要的镜像，如 node:18、openjdk:17
+    volumes:
+      - ./src:/workspace
+    working_dir: /workspace
+    command: sleep infinity
+    ports:
+      - "8000:8000"         # 如果需要运行 Web 服务就暴露端口

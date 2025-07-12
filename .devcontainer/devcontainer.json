@@ -1,0 +1,12 @@
+{
+  "name": "Local Remote Dev",
+  "dockerComposeFile": ["../docker-compose.yml"],
+  "service": "dev",
+  "workspaceFolder": "/workspace",
+  "extensions": [
+    "ms-python.python"      // Python 示例，换成你需要的插件
+  ],
+  "settings": {
+    "terminal.integrated.shell.linux": "/bin/bash"
+  }
+}
