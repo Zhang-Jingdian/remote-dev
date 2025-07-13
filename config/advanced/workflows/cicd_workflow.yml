@@ -1,0 +1,51 @@
+name: "CI/CD工作流"
+description: "完整的持续集成和部署流程"
+
+trigger:
+  - push
+  - pull_request
+  - schedule
+
+stages:
+  - name: "代码质量检查"
+    steps:
+      - name: "代码格式检查"
+        command: "./config/dev/code_quality.sh format"
+      - name: "静态代码分析"
+        command: "./config/dev/code_quality.sh check"
+      - name: "安全扫描"
+        command: "./config/security/security_hardening.sh scan"
+        
+  - name: "测试"
+    steps:
+      - name: "单元测试"
+        command: "./config/testing/test_runner.sh --unit"
+      - name: "集成测试"
+        command: "./config/testing/test_runner.sh --integration"
+      - name: "性能测试"
+        command: "./config/testing/test_runner.sh --performance"
+        
+  - name: "构建"
+    steps:
+      - name: "构建Docker镜像"
+        command: "docker build -t remote-dev:latest ."
+      - name: "推送镜像"
+        command: "docker push remote-dev:latest"
+        
+  - name: "部署"
+    steps:
+      - name: "部署到测试环境"
+        command: "./config/deployment/deploy.sh --env staging"
+      - name: "冒烟测试"
+        command: "./config/testing/smoke_test.sh"
+      - name: "部署到生产环境"
+        command: "./config/deployment/deploy.sh --env production"
+        condition: "branch == 'main'"
+
+notifications:
+  on_success:
+    - slack: "#deployments"
+    - email: "team@company.com"
+  on_failure:
+    - slack: "#alerts"
+    - email: "oncall@company.com"

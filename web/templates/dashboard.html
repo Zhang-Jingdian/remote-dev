@@ -1,0 +1,511 @@
+{% extends "base.html" %}
+
+{% block title %}仪表板 - 远程开发环境管理{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">
+        <i class="fas fa-tachometer-alt me-2"></i>
+        系统仪表板
+    </h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <div class="btn-group me-2">
+            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="refreshDashboard()">
+                <i class="fas fa-sync-alt"></i> 刷新
+            </button>
+        </div>
+        <div class="btn-group">
+            <button type="button" class="btn btn-sm btn-primary" onclick="quickActions()">
+                <i class="fas fa-bolt"></i> 快速操作
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- 系统指标卡片 -->
+<div class="row mb-4">
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card metric-card h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <div class="text-white-50 small">CPU 使用率</div>
+                        <div class="h4 mb-0 text-white" id="cpuUsage">--</div>
+                    </div>
+                    <div class="text-white-50">
+                        <i class="fas fa-microchip fa-2x"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card metric-card h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <div class="text-white-50 small">内存使用率</div>
+                        <div class="h4 mb-0 text-white" id="memoryUsage">--</div>
+                    </div>
+                    <div class="text-white-50">
+                        <i class="fas fa-memory fa-2x"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card metric-card h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <div class="text-white-50 small">磁盘使用率</div>
+                        <div class="h4 mb-0 text-white" id="diskUsage">--</div>
+                    </div>
+                    <div class="text-white-50">
+                        <i class="fas fa-hdd fa-2x"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card metric-card h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <div class="text-white-50 small">活跃连接</div>
+                        <div class="h4 mb-0 text-white" id="activeConnectionsCard">{{ app_state.active_connections or 0
+                            }}</div>
+                    </div>
+                    <div class="text-white-50">
+                        <i class="fas fa-users fa-2x"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 主要内容区域 -->
+<div class="row">
+    <!-- 集群状态 -->
+    <div class="col-lg-6 mb-4">
+        <div class="card h-100">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">
+                    <i class="fas fa-network-wired me-2"></i>
+                    集群状态
+                </h5>
+                <button class="btn btn-sm btn-outline-primary" onclick="refreshClusterStatus()">
+                    <i class="fas fa-sync-alt"></i>
+                </button>
+            </div>
+            <div class="card-body">
+                <div id="clusterStatusContent">
+                    {% if cluster_status and cluster_status.active_servers %}
+                    <div class="row">
+                        <div class="col-6">
+                            <div class="text-center">
+                                <div class="h3 text-success">{{ cluster_status.active_servers|length }}</div>
+                                <div class="text-muted small">活跃服务器</div>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="text-center">
+                                <div class="h3 text-danger">{{ cluster_status.failed_servers|length }}</div>
+                                <div class="text-muted small">故障服务器</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <hr>
+
+                    <div class="server-list">
+                        {% for server in cluster_status.active_servers %}
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span>
+                                <span class="status-indicator status-healthy"></span>
+                                {{ server }}
+                            </span>
+                            <span class="badge bg-success">运行中</span>
+                        </div>
+                        {% endfor %}
+
+                        {% for server in cluster_status.failed_servers %}
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span>
+                                <span class="status-indicator status-error"></span>
+                                {{ server }}
+                            </span>
+                            <span class="badge bg-danger">故障</span>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <div class="text-center text-muted">
+                        <i class="fas fa-server fa-3x mb-3"></i>
+                        <p>集群未配置或无可用数据</p>
+                        <a href="{{ url_for('cluster_page') }}" class="btn btn-primary">
+                            配置集群
+                        </a>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 插件状态 -->
+    <div class="col-lg-6 mb-4">
+        <div class="card h-100">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">
+                    <i class="fas fa-puzzle-piece me-2"></i>
+                    插件状态
+                </h5>
+                <a href="{{ url_for('plugins_page') }}" class="btn btn-sm btn-outline-primary">
+                    管理插件
+                </a>
+            </div>
+            <div class="card-body">
+                <div id="pluginStatusContent">
+                    {% if plugins and plugins.plugins %}
+                    {% set plugin_list = plugins.plugins.items() %}
+                    <div class="row mb-3">
+                        <div class="col-6">
+                            <div class="text-center">
+                                <div class="h3 text-primary">{{ plugin_list|length }}</div>
+                                <div class="text-muted small">已安装插件</div>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="text-center">
+                                <div class="h3 text-success" id="activePluginsCount">0</div>
+                                <div class="text-muted small">活跃插件</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <hr>
+
+                    <div class="plugin-list">
+                        {% for name, plugin in plugin_list %}
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span>
+                                <span
+                                    class="status-indicator {% if plugin.status == 'loaded' %}status-healthy{% else %}status-unknown{% endif %}"></span>
+                                {{ plugin.name or name }}
+                            </span>
+                            <span
+                                class="badge {% if plugin.status == 'loaded' %}bg-success{% else %}bg-secondary{% endif %}">
+                                {{ plugin.status or '未知' }}
+                            </span>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <div class="text-center text-muted">
+                        <i class="fas fa-puzzle-piece fa-3x mb-3"></i>
+                        <p>暂无已安装的插件</p>
+                        <a href="{{ url_for('plugins_page') }}" class="btn btn-primary">
+                            浏览插件
+                        </a>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 系统监控图表 -->
+<div class="row">
+    <div class="col-12 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-chart-line me-2"></i>
+                    系统性能监控
+                </h5>
+            </div>
+            <div class="card-body">
+                <canvas id="performanceChart" width="400" height="100"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 最近活动 -->
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-history me-2"></i>
+                    最近活动
+                </h5>
+            </div>
+            <div class="card-body">
+                <div id="recentActivities">
+                    <div class="timeline">
+                        <div class="timeline-item">
+                            <div class="timeline-marker bg-success"></div>
+                            <div class="timeline-content">
+                                <h6 class="timeline-title">系统启动</h6>
+                                <p class="timeline-description">远程开发环境管理系统已启动</p>
+                                <small class="text-muted">刚刚</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .timeline {
+        position: relative;
+        padding-left: 30px;
+    }
+
+    .timeline::before {
+        content: '';
+        position: absolute;
+        left: 15px;
+        top: 0;
+        bottom: 0;
+        width: 2px;
+        background-color: #dee2e6;
+    }
+
+    .timeline-item {
+        position: relative;
+        margin-bottom: 20px;
+    }
+
+    .timeline-marker {
+        position: absolute;
+        left: -23px;
+        top: 0;
+        width: 16px;
+        height: 16px;
+        border-radius: 50%;
+        border: 2px solid #fff;
+        box-shadow: 0 0 0 2px #dee2e6;
+    }
+
+    .timeline-content {
+        background-color: #f8f9fa;
+        padding: 15px;
+        border-radius: 8px;
+        border-left: 3px solid #007bff;
+    }
+
+    .timeline-title {
+        margin: 0 0 5px 0;
+        font-size: 14px;
+        font-weight: 600;
+    }
+
+    .timeline-description {
+        margin: 0 0 5px 0;
+        font-size: 13px;
+        color: #6c757d;
+    }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    let performanceChart;
+    let chartData = {
+        labels: [],
+        datasets: [{
+            label: 'CPU 使用率',
+            data: [],
+            borderColor: 'rgb(75, 192, 192)',
+            backgroundColor: 'rgba(75, 192, 192, 0.1)',
+            tension: 0.1
+        }, {
+            label: '内存使用率',
+            data: [],
+            borderColor: 'rgb(255, 99, 132)',
+            backgroundColor: 'rgba(255, 99, 132, 0.1)',
+            tension: 0.1
+        }]
+    };
+
+    // 初始化性能图表
+    function initPerformanceChart() {
+        const ctx = document.getElementById('performanceChart').getContext('2d');
+        performanceChart = new Chart(ctx, {
+            type: 'line',
+            data: chartData,
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        max: 100,
+                        ticks: {
+                            callback: function (value) {
+                                return value + '%';
+                            }
+                        }
+                    }
+                },
+                plugins: {
+                    legend: {
+                        position: 'top',
+                    }
+                }
+            }
+        });
+    }
+
+    // 更新性能数据
+    function updatePerformanceData(metrics) {
+        const now = new Date().toLocaleTimeString();
+
+        // 保持最近20个数据点
+        if (chartData.labels.length >= 20) {
+            chartData.labels.shift();
+            chartData.datasets[0].data.shift();
+            chartData.datasets[1].data.shift();
+        }
+
+        chartData.labels.push(now);
+        chartData.datasets[0].data.push(metrics.cpu_usage || 0);
+        chartData.datasets[1].data.push(metrics.memory_usage || 0);
+
+        if (performanceChart) {
+            performanceChart.update('none');
+        }
+    }
+
+    // 更新系统指标
+    function updateMetrics(metrics) {
+        document.getElementById('cpuUsage').textContent = (metrics.cpu_usage || 0).toFixed(1) + '%';
+        document.getElementById('memoryUsage').textContent = (metrics.memory_usage || 0).toFixed(1) + '%';
+        document.getElementById('diskUsage').textContent = (metrics.disk_usage || 0).toFixed(1) + '%';
+        document.getElementById('activeConnectionsCard').textContent = metrics.active_connections || 0;
+
+        updatePerformanceData(metrics);
+    }
+
+    // 刷新仪表板
+    async function refreshDashboard() {
+        try {
+            const metrics = await apiRequest('/api/metrics');
+            updateMetrics(metrics);
+            showToast('success', '仪表板数据已更新');
+        } catch (error) {
+            showToast('error', '刷新失败: ' + error.message);
+        }
+    }
+
+    // 刷新集群状态
+    async function refreshClusterStatus() {
+        try {
+            const clusterStatus = await apiRequest('/api/cluster/status');
+            updateClusterStatusDisplay(clusterStatus);
+            showToast('success', '集群状态已更新');
+        } catch (error) {
+            showToast('error', '刷新集群状态失败: ' + error.message);
+        }
+    }
+
+    // 更新集群状态显示
+    function updateClusterStatusDisplay(clusterStatus) {
+        const content = document.getElementById('clusterStatusContent');
+
+        if (clusterStatus.active_servers && clusterStatus.active_servers.length > 0) {
+            let html = `
+                <div class="row">
+                    <div class="col-6">
+                        <div class="text-center">
+                            <div class="h3 text-success">${clusterStatus.active_servers.length}</div>
+                            <div class="text-muted small">活跃服务器</div>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="text-center">
+                            <div class="h3 text-danger">${clusterStatus.failed_servers ? clusterStatus.failed_servers.length : 0}</div>
+                            <div class="text-muted small">故障服务器</div>
+                        </div>
+                    </div>
+                </div>
+                <hr>
+                <div class="server-list">
+            `;
+
+            clusterStatus.active_servers.forEach(server => {
+                html += `
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <span>
+                            <span class="status-indicator status-healthy"></span>
+                            ${server}
+                        </span>
+                        <span class="badge bg-success">运行中</span>
+                    </div>
+                `;
+            });
+
+            if (clusterStatus.failed_servers) {
+                clusterStatus.failed_servers.forEach(server => {
+                    html += `
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span>
+                                <span class="status-indicator status-error"></span>
+                                ${server}
+                            </span>
+                            <span class="badge bg-danger">故障</span>
+                        </div>
+                    `;
+                });
+            }
+
+            html += '</div>';
+            content.innerHTML = html;
+        }
+    }
+
+    // 快速操作
+    function quickActions() {
+        // 这里可以实现快速操作的模态框或下拉菜单
+        showToast('info', '快速操作功能即将推出');
+    }
+
+    // Socket.IO 事件监听
+    socket.on('metrics_updated', function (data) {
+        updateMetrics(data);
+    });
+
+    socket.on('cluster_status_updated', function (data) {
+        updateClusterStatusDisplay(data);
+    });
+
+    // 页面加载完成后初始化
+    document.addEventListener('DOMContentLoaded', function () {
+        initPerformanceChart();
+
+        // 定期刷新数据
+        setInterval(refreshDashboard, 30000); // 每30秒刷新一次
+
+        // 初始加载数据
+        refreshDashboard();
+
+        // 计算活跃插件数量
+        const pluginElements = document.querySelectorAll('.plugin-list .status-indicator.status-healthy');
+        document.getElementById('activePluginsCount').textContent = pluginElements.length;
+    });
+</script>
+{% endblock %}

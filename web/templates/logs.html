@@ -1,0 +1,331 @@
+{% extends "base.html" %}
+
+{% block title %}日志查看{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">
+                        <i class="fas fa-file-alt"></i> 日志查看
+                    </h3>
+                    <div class="card-tools">
+                        <div class="btn-group">
+                            <button class="btn btn-sm btn-primary" onclick="refreshLogs()">
+                                <i class="fas fa-sync"></i> 刷新
+                            </button>
+                            <button class="btn btn-sm btn-success" onclick="downloadLogs()">
+                                <i class="fas fa-download"></i> 下载
+                            </button>
+                            <button class="btn btn-sm btn-warning" onclick="clearLogs()">
+                                <i class="fas fa-trash"></i> 清空
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-3">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h5>日志过滤</h5>
+                                </div>
+                                <div class="card-body">
+                                    <div class="form-group">
+                                        <label for="logLevel">日志级别</label>
+                                        <select class="form-control" id="logLevel" onchange="filterLogs()">
+                                            <option value="">全部</option>
+                                            <option value="DEBUG">DEBUG</option>
+                                            <option value="INFO">INFO</option>
+                                            <option value="WARNING">WARNING</option>
+                                            <option value="ERROR">ERROR</option>
+                                            <option value="CRITICAL">CRITICAL</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="logSource">日志来源</label>
+                                        <select class="form-control" id="logSource" onchange="filterLogs()">
+                                            <option value="">全部</option>
+                                            <option value="system">系统</option>
+                                            <option value="sync">同步</option>
+                                            <option value="docker">Docker</option>
+                                            <option value="network">网络</option>
+                                            <option value="security">安全</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="logSearch">搜索关键词</label>
+                                        <input type="text" class="form-control" id="logSearch" placeholder="输入关键词..."
+                                            onkeyup="searchLogs()">
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="logDate">日期范围</label>
+                                        <input type="date" class="form-control mb-2" id="logDateFrom"
+                                            onchange="filterLogs()">
+                                        <input type="date" class="form-control" id="logDateTo" onchange="filterLogs()">
+                                    </div>
+                                    <div class="form-group">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" id="autoRefresh"
+                                                onchange="toggleAutoRefresh()">
+                                            <label class="form-check-label" for="autoRefresh">
+                                                自动刷新
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-9">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h5>日志内容</h5>
+                                    <div class="card-tools">
+                                        <span class="badge badge-info" id="logCount">0 条日志</span>
+                                    </div>
+                                </div>
+                                <div class="card-body p-0">
+                                    <div id="logs-container"
+                                        style="height: 600px; overflow-y: auto; font-family: monospace; font-size: 13px; background-color: #1e1e1e; color: #ffffff; padding: 10px;">
+                                        <!-- 日志内容将在这里显示 -->
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    let autoRefreshInterval;
+    let allLogs = [];
+    let filteredLogs = [];
+
+    // 获取日志颜色
+    function getLogColor(level) {
+        switch (level) {
+            case 'DEBUG': return '#6c757d';
+            case 'INFO': return '#17a2b8';
+            case 'WARNING': return '#ffc107';
+            case 'ERROR': return '#dc3545';
+            case 'CRITICAL': return '#e83e8c';
+            default: return '#ffffff';
+        }
+    }
+
+    // 格式化日志条目
+    function formatLogEntry(log) {
+        const timestamp = new Date(log.timestamp).toLocaleString();
+        const color = getLogColor(log.level);
+
+        return `<div class="log-entry" data-level="${log.level}" data-source="${log.source}" data-timestamp="${log.timestamp}">
+        <span style="color: #6c757d;">[${timestamp}]</span>
+        <span style="color: ${color}; font-weight: bold;">[${log.level}]</span>
+        <span style="color: #28a745;">[${log.source}]</span>
+        <span style="color: #ffffff;">${log.message}</span>
+    </div>`;
+    }
+
+    // 加载日志
+    function loadLogs() {
+        fetch('/api/logs')
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    allLogs = data.logs;
+                    filterLogs();
+                } else {
+                    console.error('加载日志失败:', data.message);
+                }
+            })
+            .catch(error => {
+                console.error('加载日志出错:', error);
+            });
+    }
+
+    // 过滤日志
+    function filterLogs() {
+        const level = document.getElementById('logLevel').value;
+        const source = document.getElementById('logSource').value;
+        const dateFrom = document.getElementById('logDateFrom').value;
+        const dateTo = document.getElementById('logDateTo').value;
+
+        filteredLogs = allLogs.filter(log => {
+            if (level && log.level !== level) return false;
+            if (source && log.source !== source) return false;
+
+            if (dateFrom) {
+                const logDate = new Date(log.timestamp).toISOString().split('T')[0];
+                if (logDate < dateFrom) return false;
+            }
+
+            if (dateTo) {
+                const logDate = new Date(log.timestamp).toISOString().split('T')[0];
+                if (logDate > dateTo) return false;
+            }
+
+            return true;
+        });
+
+        displayLogs();
+    }
+
+    // 搜索日志
+    function searchLogs() {
+        const searchTerm = document.getElementById('logSearch').value.toLowerCase();
+
+        if (searchTerm === '') {
+            displayLogs();
+            return;
+        }
+
+        const searchResults = filteredLogs.filter(log =>
+            log.message.toLowerCase().includes(searchTerm) ||
+            log.source.toLowerCase().includes(searchTerm)
+        );
+
+        displayLogs(searchResults);
+    }
+
+    // 显示日志
+    function displayLogs(logs = filteredLogs) {
+        const container = document.getElementById('logs-container');
+        const logCount = document.getElementById('logCount');
+
+        container.innerHTML = '';
+        logCount.textContent = `${logs.length} 条日志`;
+
+        logs.forEach(log => {
+            container.innerHTML += formatLogEntry(log);
+        });
+
+        // 滚动到底部
+        container.scrollTop = container.scrollHeight;
+    }
+
+    // 刷新日志
+    function refreshLogs() {
+        loadLogs();
+    }
+
+    // 下载日志
+    function downloadLogs() {
+        const level = document.getElementById('logLevel').value;
+        const source = document.getElementById('logSource').value;
+        const dateFrom = document.getElementById('logDateFrom').value;
+        const dateTo = document.getElementById('logDateTo').value;
+
+        const params = new URLSearchParams();
+        if (level) params.append('level', level);
+        if (source) params.append('source', source);
+        if (dateFrom) params.append('date_from', dateFrom);
+        if (dateTo) params.append('date_to', dateTo);
+
+        window.open(`/api/logs/download?${params.toString()}`);
+    }
+
+    // 清空日志
+    function clearLogs() {
+        if (confirm('确定要清空所有日志吗？此操作不可恢复。')) {
+            fetch('/api/logs/clear', {
+                method: 'POST'
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        allLogs = [];
+                        filteredLogs = [];
+                        displayLogs();
+                        alert('日志已清空');
+                    } else {
+                        alert('清空日志失败: ' + data.message);
+                    }
+                });
+        }
+    }
+
+    // 切换自动刷新
+    function toggleAutoRefresh() {
+        const autoRefresh = document.getElementById('autoRefresh').checked;
+
+        if (autoRefresh) {
+            autoRefreshInterval = setInterval(loadLogs, 5000);
+        } else {
+            if (autoRefreshInterval) {
+                clearInterval(autoRefreshInterval);
+            }
+        }
+    }
+
+    // 初始化
+    document.addEventListener('DOMContentLoaded', function () {
+        // 设置默认日期范围（最近7天）
+        const today = new Date();
+        const weekAgo = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
+
+        document.getElementById('logDateFrom').value = weekAgo.toISOString().split('T')[0];
+        document.getElementById('logDateTo').value = today.toISOString().split('T')[0];
+
+        // 加载日志
+        loadLogs();
+
+        // 添加键盘快捷键
+        document.addEventListener('keydown', function (e) {
+            if (e.ctrlKey || e.metaKey) {
+                switch (e.key) {
+                    case 'r':
+                        e.preventDefault();
+                        refreshLogs();
+                        break;
+                    case 'f':
+                        e.preventDefault();
+                        document.getElementById('logSearch').focus();
+                        break;
+                    case 'd':
+                        e.preventDefault();
+                        downloadLogs();
+                        break;
+                }
+            }
+        });
+    });
+
+    // 添加样式
+    const style = document.createElement('style');
+    style.textContent = `
+    .log-entry {
+        margin-bottom: 2px;
+        padding: 2px 5px;
+        border-radius: 3px;
+        word-wrap: break-word;
+    }
+    
+    .log-entry:hover {
+        background-color: rgba(255, 255, 255, 0.1);
+    }
+    
+    #logs-container::-webkit-scrollbar {
+        width: 8px;
+    }
+    
+    #logs-container::-webkit-scrollbar-track {
+        background: #2d2d2d;
+    }
+    
+    #logs-container::-webkit-scrollbar-thumb {
+        background: #555;
+        border-radius: 4px;
+    }
+    
+    #logs-container::-webkit-scrollbar-thumb:hover {
+        background: #777;
+    }
+`;
+    document.head.appendChild(style);
+</script>
+{% endblock %}

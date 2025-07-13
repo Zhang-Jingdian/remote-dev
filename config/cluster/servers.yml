@@ -1,0 +1,42 @@
+# =============================================================================
+# 服务器集群配置
+# =============================================================================
+
+servers:
+  - name: "primary"
+    host: "192.168.1.100"
+    user: "dev"
+    port: 22
+    role: "primary"
+    weight: 100
+    health_check: "/health"
+    tags: ["production", "primary"]
+    
+  - name: "secondary"
+    host: "192.168.1.101"
+    user: "dev"
+    port: 22
+    role: "secondary"
+    weight: 50
+    health_check: "/health"
+    tags: ["production", "backup"]
+    
+  - name: "development"
+    host: "192.168.1.102"
+    user: "dev"
+    port: 22
+    role: "development"
+    weight: 25
+    health_check: "/health"
+    tags: ["development", "testing"]
+
+load_balancer:
+  algorithm: "weighted_round_robin"  # round_robin, weighted_round_robin, least_connections
+  sticky_sessions: false
+  health_check_interval: 30
+  failover_threshold: 3
+
+monitoring:
+  enabled: true
+  metrics_port: 9090
+  alert_webhook: "https://hooks.slack.com/services/..."

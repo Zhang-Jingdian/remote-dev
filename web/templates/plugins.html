@@ -1,0 +1,188 @@
+{% extends "base.html" %}
+
+{% block title %}插件管理{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">
+                        <i class="fas fa-plug"></i> 插件管理
+                    </h3>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-8">
+                            <h5>已安装插件</h5>
+                            <div class="row">
+                                {% for plugin in plugins %}
+                                <div class="col-md-6 mb-3">
+                                    <div class="card">
+                                        <div class="card-body">
+                                            <h6 class="card-title">
+                                                <i class="fas fa-{{ plugin.icon }}"></i> {{ plugin.name }}
+                                                <span
+                                                    class="badge badge-{{ 'success' if plugin.enabled else 'secondary' }} float-right">
+                                                    {{ '启用' if plugin.enabled else '禁用' }}
+                                                </span>
+                                            </h6>
+                                            <p class="card-text">{{ plugin.description }}</p>
+                                            <small class="text-muted">版本: {{ plugin.version }} | 作者: {{ plugin.author
+                                                }}</small>
+                                            <div class="mt-2">
+                                                <button
+                                                    class="btn btn-sm btn-{{ 'warning' if plugin.enabled else 'success' }}"
+                                                    onclick="togglePlugin('{{ plugin.id }}', {{ plugin.enabled|lower }})">
+                                                    <i class="fas fa-{{ 'pause' if plugin.enabled else 'play' }}"></i>
+                                                    {{ '禁用' if plugin.enabled else '启用' }}
+                                                </button>
+                                                <button class="btn btn-sm btn-info"
+                                                    onclick="configPlugin('{{ plugin.id }}')">
+                                                    <i class="fas fa-cog"></i> 配置
+                                                </button>
+                                                <button class="btn btn-sm btn-danger"
+                                                    onclick="uninstallPlugin('{{ plugin.id }}')">
+                                                    <i class="fas fa-trash"></i> 卸载
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <h5>插件操作</h5>
+                            <div class="btn-group-vertical btn-block mb-3">
+                                <button class="btn btn-primary" onclick="installPlugin()">
+                                    <i class="fas fa-download"></i> 安装插件
+                                </button>
+                                <button class="btn btn-success" onclick="refreshPlugins()">
+                                    <i class="fas fa-sync"></i> 刷新插件
+                                </button>
+                                <button class="btn btn-info" onclick="pluginStore()">
+                                    <i class="fas fa-store"></i> 插件商店
+                                </button>
+                                <button class="btn btn-warning" onclick="createPlugin()">
+                                    <i class="fas fa-plus"></i> 创建插件
+                                </button>
+                            </div>
+
+                            <h5>插件统计</h5>
+                            <div class="info-box">
+                                <div class="info-box-content">
+                                    <span class="info-box-text">总插件数</span>
+                                    <span class="info-box-number">{{ plugins|length }}</span>
+                                </div>
+                            </div>
+                            <div class="info-box">
+                                <div class="info-box-content">
+                                    <span class="info-box-text">已启用</span>
+                                    <span class="info-box-number">{{ plugins|selectattr('enabled')|list|length }}</span>
+                                </div>
+                            </div>
+                            <div class="info-box">
+                                <div class="info-box-content">
+                                    <span class="info-box-text">可更新</span>
+                                    <span class="info-box-number">{{ plugins|selectattr('has_update')|list|length
+                                        }}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    function togglePlugin(pluginId, enabled) {
+        const action = enabled ? 'disable' : 'enable';
+
+        fetch('/api/plugins/' + action, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ plugin_id: pluginId })
+        })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    location.reload();
+                } else {
+                    alert('操作失败: ' + data.message);
+                }
+            });
+    }
+
+    function configPlugin(pluginId) {
+        window.open('/plugins/config/' + pluginId, '_blank');
+    }
+
+    function uninstallPlugin(pluginId) {
+        if (confirm('确定要卸载这个插件吗？')) {
+            fetch('/api/plugins/uninstall', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ plugin_id: pluginId })
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        location.reload();
+                    } else {
+                        alert('卸载失败: ' + data.message);
+                    }
+                });
+        }
+    }
+
+    function installPlugin() {
+        const url = prompt('请输入插件URL或名称:');
+        if (url) {
+            fetch('/api/plugins/install', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ url: url })
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert('插件安装成功');
+                        location.reload();
+                    } else {
+                        alert('安装失败: ' + data.message);
+                    }
+                });
+        }
+    }
+
+    function refreshPlugins() {
+        fetch('/api/plugins/refresh', { method: 'POST' })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    location.reload();
+                } else {
+                    alert('刷新失败: ' + data.message);
+                }
+            });
+    }
+
+    function pluginStore() {
+        window.open('/plugins/store', '_blank');
+    }
+
+    function createPlugin() {
+        window.open('/plugins/create', '_blank');
+    }
+</script>
+{% endblock %}

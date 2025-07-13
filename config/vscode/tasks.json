@@ -1,75 +1,33 @@
 {
-    "version": "2.0.0",
-    "tasks": [
-        {
-            "label": "🚀 启动 SSH + Dev Container 模式",
-            "type": "shell",
-            "command": "bash config/scripts/start-dev.sh",
-            "group": "build",
-            "presentation": {
-                "echo": true,
-                "reveal": "always",
-                "focus": false,
-                "panel": "new"
-            },
-            "problemMatcher": [],
-            "detail": "检查环境并准备SSH + Dev Container模式"
-        },
-        {
-            "label": "🔧 切换到远程Docker服务器模式",
-            "type": "shell",
-            "command": "export DOCKER_HOST=ssh://zjd && echo '✅ 远程Docker模式已启用' && echo '💡 现在可以使用: docker-compose up -d'",
-            "group": "build",
-            "presentation": {
-                "echo": true,
-                "reveal": "always",
-                "focus": false,
-                "panel": "new"
-            },
-            "problemMatcher": [],
-            "detail": "快速切换到远程Docker服务器模式"
-        },
-        {
-            "label": "🏠 切换到本地Docker模式",
-            "type": "shell",
-            "command": "unset DOCKER_HOST && echo '✅ 本地Docker模式已启用' && echo '💡 现在可以使用本地Dev Containers'",
-            "group": "build",
-            "presentation": {
-                "echo": true,
-                "reveal": "always",
-                "focus": false,
-                "panel": "new"
-            },
-            "problemMatcher": [],
-            "detail": "快速切换到本地Docker模式"
-        },
-        {
-            "label": "🎯 智能选择最佳模式",
-            "type": "shell",
-            "command": "bash config/scripts/auto-dev.sh",
-            "group": "build",
-            "presentation": {
-                "echo": true,
-                "reveal": "always",
-                "focus": false,
-                "panel": "new"
-            },
-            "problemMatcher": [],
-            "detail": "自动检测并启用最佳开发模式"
-        },
-        {
-            "label": "🐳 启动远程Docker服务",
-            "type": "shell",
-            "command": "docker-compose up -d && echo '🎉 服务已启动，访问 http://localhost:8000'",
-            "group": "build",
-            "presentation": {
-                "echo": true,
-                "reveal": "always",
-                "focus": false,
-                "panel": "new"
-            },
-            "problemMatcher": [],
-            "detail": "启动Docker Compose服务"
-        }
-    ]
+  // See https://go.microsoft.com/fwlink/?LinkId=733558
+  // for the documentation about the tasks.json format
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Dev Mode: Intelligent Start (dev)",
+      "type": "shell",
+      "command": "./config/scripts/auto-dev.sh",
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "panel": "new"
+      },
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      },
+      "detail": "Recommended: Automatically detects and configures the best development mode."
+    },
+    {
+      "label": "Dev Mode: Sync Code to Remote (devsync)",
+      "type": "shell",
+      "command": "./config/scripts/sync.sh",
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "panel": "new"
+      },
+      "detail": "Uploads local changes in 'src/' to the remote server."
+    }
+  ]
 }
