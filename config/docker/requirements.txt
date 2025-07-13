@@ -7,6 +7,9 @@ black==23.12.1
 flake8==7.0.0
 isort==5.13.2
 pytest==7.4.3
+ipython==8.18.1        # 更好的Python交互式shell
+rich==13.7.0          # 美化终端输出
+httpie==3.2.2         # 更好的HTTP客户端
 
 # Web框架 (如果需要的话，可以取消注释)
 # fastapi==0.104.1

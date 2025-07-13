@@ -1,0 +1,33 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/compose-spec/compose-spec/master/schema/compose-spec.json
+services:
+  dev:
+    image: python:3.11
+    command: sleep infinity
+    ports:
+      - "8000:8000"
+    volumes:
+      # 使用相对路径，支持本地和远程开发
+      - ../..:/workspace
+      # 持久化Python包缓存
+      - python_cache:/root/.cache/pip
+    working_dir: /workspace
+    environment:
+      - PYTHONPATH=/workspace
+      - PYTHONUNBUFFERED=1
+      # 清除代理设置避免网络问题
+      - http_proxy=
+      - https_proxy=
+      - HTTP_PROXY=
+      - HTTPS_PROXY=
+    # 网络配置，方便远程访问
+    networks:
+      - dev-network
+
+# 定义数据卷
+volumes:
+  python_cache:
+
+    # 定义网络
+networks:
+  dev-network:
+    driver: bridge
