@@ -26,61 +26,68 @@
 ### 📊 系统架构图
 
 ```mermaid
-graph TB
-    subgraph "本地环境 🖥️"
-        A[work/ 工作空间] --> B[dev CLI工具]
-        B --> C[config.env 配置]
-        D[main.py API服务] --> E[web/ Vue3前端]
-        F[tests/ 测试套件]
+graph TD
+    subgraph "开发环境 (本地)"
+        A["👨‍💻 开发者 (你)"]
+        B["💻 本地IDE (VSCode, etc.)"]
+        C["💼 work/ (项目代码)"]
     end
-    
-    subgraph "Docker容器 🐳"
-        G[remote-dev-env 容器]
-        H[Python运行环境]
-        I[同步的项目代码]
+
+    subgraph "工具链 & 服务 (本地)"
+        D["⚡ dev CLI"]
+        E["⚙️ main.py (API服务)"]
+        F["📊 web/ (Vue3前端)"]
     end
-    
-    subgraph "网络通信 🌐"
-        J[rsync 文件同步]
-        K[Docker API]
-        L[HTTP API 5000端口]
-        M[Web服务 8080端口]
+
+    subgraph "远程Docker环境 (服务器)"
+        G["🐳 remote-dev-env 容器"]
+        H["🐍 Python 运行环境"]
+        I["🔄 同步后的项目代码"]
     end
+
+    A --> B
+    B --> C
+
+    C -- "rsync 同步" --> D
+    D -- "执行/管理" --> G
+    D -- "文件系统" --> C
     
-    A -->|rsync同步| J
-    J --> I
-    B -->|Docker命令| K
-    K --> G
-    G --> H
-    H --> I
-    D -->|API服务| L
-    E -->|Web界面| M
+    A -- "访问" --> F
+    F -- "HTTP API (Port 5000)" --> E
+    E -- "状态查询" --> D
+
+    D -- "Docker API" ---> G
     
-    style A fill:#e1f5fe
-    style D fill:#f3e5f5
-    style E fill:#e8f5e8
-    style G fill:#fff3e0
+    subgraph G
+        direction LR
+        H --> I
+    end
+
+    style A fill:#cce5ff,stroke:#333,stroke-width:2px
+    style G fill:#d4edda,stroke:#155724,stroke-width:2px,stroke-dasharray: 5 5
 ```
 
 ### 🔄 工作流程图
 
 ```mermaid
 sequenceDiagram
-    participant Dev as 👨‍💻 开发者
-    participant Work as 💼 work/项目
-    participant CLI as ⚡ dev CLI
-    participant Docker as 🐳 Docker容器
-    participant Remote as 🖥️ 远程环境
+    actor Dev as 👨‍💻 开发者
+    participant Local as 💻 本地环境 (work/)
+    participant CLI as ⚡ dev 脚本
+    participant Remote as 🐳 远程容器
 
-    Dev->>Work: 1. 在work/目录创建/修改项目
-    Dev->>CLI: 2. 运行 `./dev sync`
-    CLI->>Remote: 3. rsync同步代码
+    Dev->>Local: 1. 编写/修改代码
     
-    Dev->>CLI: 4. 运行 `./dev remote-run 'python my-project/main.py'`
-    CLI->>Docker: 5. 在容器中执行命令
-    Docker-->>Dev: 6. 返回执行结果
-    
-    Note over Dev,Remote: 🔁 开发循环：本地编码 -> 同步 -> 远程执行
+    loop 开发循环
+        Dev->>CLI: 2. 执行 `./dev sync`
+        CLI-xRemote: 3. rsync 增量同步代码
+        
+        Dev->>CLI: 4. 执行 `./dev remote-run '...'`
+        CLI->>Remote: 5. 在容器内执行命令
+        Remote-->>Dev: 6. 返回结果
+    end
+
+    Note over Dev,Remote: 循环往复，直到功能完成！
 ```
 
 ---
