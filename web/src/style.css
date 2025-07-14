@@ -1,0 +1,182 @@
+/**
+ * 全局样式 - 远程开发环境管理
+ * 作者: Zhang-Jingdian
+ * 邮箱: 2157429750@qq.com
+ * 创建时间: 2025年7月14日
+ */
+
+/* 重置样式 */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+html,
+body {
+    height: 100%;
+    font-family: 'Helvetica Neue', Helvetica, 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', '微软雅黑', Arial, sans-serif;
+}
+
+#app {
+    height: 100%;
+}
+
+/* 状态指示器 */
+.status-indicator {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    margin-right: 8px;
+}
+
+.status-success {
+    background-color: #67c23a;
+}
+
+.status-warning {
+    background-color: #e6a23c;
+}
+
+.status-danger {
+    background-color: #f56c6c;
+}
+
+.status-info {
+    background-color: #909399;
+}
+
+/* 滚动条样式 */
+::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+
+::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #c1c1c1;
+    border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #a8a8a8;
+}
+
+/* 暗色主题滚动条 */
+.dark ::-webkit-scrollbar-track {
+    background: #2c2c2c;
+}
+
+.dark ::-webkit-scrollbar-thumb {
+    background: #6c6c6c;
+}
+
+.dark ::-webkit-scrollbar-thumb:hover {
+    background: #8c8c8c;
+}
+
+/* 动画效果 */
+.fade-enter-active,
+.fade-leave-active {
+    transition: opacity 0.3s ease;
+}
+
+.fade-enter-from,
+.fade-leave-to {
+    opacity: 0;
+}
+
+/* 卡片动画 */
+.el-card {
+    transition: all 0.3s ease;
+}
+
+.el-card:hover {
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+    transform: translateY(-2px);
+}
+
+/* 响应式布局 */
+@media (max-width: 768px) {
+    .el-aside {
+        width: 60px !important;
+    }
+
+    .logo-text {
+        display: none;
+    }
+
+    .el-menu-item span {
+        display: none;
+    }
+}
+
+/* 工具类 */
+.text-center {
+    text-align: center;
+}
+
+.text-left {
+    text-align: left;
+}
+
+.text-right {
+    text-align: right;
+}
+
+.mb-10 {
+    margin-bottom: 10px;
+}
+
+.mb-20 {
+    margin-bottom: 20px;
+}
+
+.mt-10 {
+    margin-top: 10px;
+}
+
+.mt-20 {
+    margin-top: 20px;
+}
+
+.p-10 {
+    padding: 10px;
+}
+
+.p-20 {
+    padding: 20px;
+}
+
+/* 加载状态 */
+.loading-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 200px;
+    color: #909399;
+}
+
+/* 空状态 */
+.empty-container {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    height: 300px;
+    color: #909399;
+}
+
+.empty-container .el-icon {
+    margin-bottom: 16px;
+}
+
+.empty-container p {
+    margin-bottom: 16px;
+    font-size: 14px;
+}
