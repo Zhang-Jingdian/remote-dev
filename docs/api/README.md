@@ -690,6 +690,148 @@ ws.on('metrics', (data) => {
 });
 ```
 
+### Vue3 SDK
+
+```vue
+<template>
+  <div class="remote-dev-dashboard">
+    <h1>远程开发环境管理</h1>
+    
+    <!-- 系统指标 -->
+    <el-row :gutter="20">
+      <el-col :span="6" v-for="metric in metrics" :key="metric.name">
+        <el-card>
+          <div class="metric-card">
+            <div class="metric-value">{{ metric.value }}</div>
+            <div class="metric-label">{{ metric.label }}</div>
+          </div>
+        </el-card>
+      </el-col>
+    </el-row>
+    
+    <!-- 实时连接状态 -->
+    <el-tag :type="systemStore.connected ? 'success' : 'danger'">
+      {{ systemStore.connected ? '已连接' : '未连接' }}
+    </el-tag>
+  </div>
+</template>
+
+<script setup>
+import { ref, onMounted } from 'vue'
+import { useSystemStore } from '@/stores/system'
+
+const systemStore = useSystemStore()
+const metrics = ref([
+  { name: 'cpu', label: 'CPU使用率', value: '0%' },
+  { name: 'memory', label: '内存使用率', value: '0%' },
+  { name: 'disk', label: '磁盘使用率', value: '0%' },
+  { name: 'connections', label: '活跃连接', value: '0' }
+])
+
+// 获取系统指标
+const fetchMetrics = async () => {
+  await systemStore.fetchMetrics()
+  
+  metrics.value = [
+    { name: 'cpu', label: 'CPU使用率', value: `${systemStore.metrics.cpuUsage.toFixed(1)}%` },
+    { name: 'memory', label: '内存使用率', value: `${systemStore.metrics.memoryUsage.toFixed(1)}%` },
+    { name: 'disk', label: '磁盘使用率', value: `${systemStore.metrics.diskUsage.toFixed(1)}%` },
+    { name: 'connections', label: '活跃连接', value: systemStore.metrics.activeConnections.toString() }
+  ]
+}
+
+// 更新配置
+const updateConfig = async (key, value) => {
+  try {
+    const response = await axios.post('/api/config', { key, value })
+    if (response.data.success) {
+      ElMessage.success('配置更新成功')
+    }
+  } catch (error) {
+    ElMessage.error('配置更新失败')
+  }
+}
+
+onMounted(() => {
+  // 初始化WebSocket连接
+  systemStore.initWebSocket()
+  
+  // 获取初始数据
+  fetchMetrics()
+  
+  // 定期刷新数据
+  setInterval(fetchMetrics, 5000)
+})
+</script>
+
+<style scoped>
+.metric-card {
+  text-align: center;
+  padding: 20px;
+}
+
+.metric-value {
+  font-size: 24px;
+  font-weight: bold;
+  color: #409EFF;
+}
+
+.metric-label {
+  font-size: 14px;
+  color: #909399;
+  margin-top: 8px;
+}
+</style>
+```
+
+### Pinia Store 使用示例
+
+```javascript
+// stores/system.js
+import { defineStore } from 'pinia'
+import { io } from 'socket.io-client'
+import axios from 'axios'
+
+export const useSystemStore = defineStore('system', {
+  state: () => ({
+    connected: false,
+    metrics: {
+      cpuUsage: 0,
+      memoryUsage: 0,
+      diskUsage: 0,
+      activeConnections: 0
+    },
+    config: {},
+    socket: null
+  }),
+
+  actions: {
+    // 初始化WebSocket连接
+    initWebSocket() {
+      this.socket = io('ws://localhost:8080')
+      
+      this.socket.on('connect', () => {
+        this.connected = true
+      })
+      
+      this.socket.on('metrics_updated', (data) => {
+        this.metrics = { ...this.metrics, ...data }
+      })
+    },
+
+    // 获取系统指标
+    async fetchMetrics() {
+      try {
+        const response = await axios.get('/api/metrics')
+        this.metrics = response.data
+      } catch (error) {
+        console.error('获取指标失败:', error)
+      }
+    }
+  }
+})
+```
+
 ## 🔗 相关资源
 
 - [用户手册](../user/README.md) - 基础使用指南
