@@ -53,7 +53,7 @@ graph TD
     D -- "文件系统" --> C
     
     A -- "访问" --> F
-    F -- "HTTP API (Port 5000)" --> E
+    F -- "HTTP API (Port 5001)" --> E
     E -- "状态查询" --> D
 
     D -- "Docker API" ---> G
@@ -158,7 +158,7 @@ REMOTE_PATH=/home/zjd/workspace # 远程工作目录
 **第2步: 远程执行**
 ```bash
 # 使用 remote-run 命令在远程Docker容器中执行脚本
-./dev remote-run python example-python-project/main.py
+./dev remote-run python3 example-python-project/main.py
 ```
 你将看到远程服务器上斐波那契数列的计算结果和系统信息。
 
@@ -194,7 +194,7 @@ REMOTE_PATH=/home/zjd/workspace # 远程工作目录
 python3 main.py
 
 # 在浏览器中打开
-open http://localhost:5000
+open http://localhost:5001
 ```
 
 ### 🎨 前端开发
