@@ -121,7 +121,7 @@ git clone https://github.com/Zhang-Jingdian/remote-dev.git
 cd remote-dev
 
 # 安装依赖 (注意路径!)
-pip install -r docker/requirements.txt
+pip3 install -r docker/requirements.txt
 ```
 
 ### 3. 配置
