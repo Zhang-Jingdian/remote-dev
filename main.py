@@ -37,25 +37,57 @@ MAX_HISTORY = 50  # 减少历史记录数量
 
 def load_env_config():
     """加载配置文件"""
-    config_file = Path(__file__).parent.parent / 'config.env'
+    # 确定配置文件的绝对路径
+    # Path(__file__) -> 当前文件 (main.py)
+    # .parent -> 当前文件的父目录 (src/ 或者根目录)
+    # .parent -> 再上一级父目录 (根目录)
+    # 这样可以确保无论脚本从哪里运行，都能找到正确的config.env
+    config_file = Path(__file__).parent / 'config.env'
+    if not config_file.exists():
+        # 如果在当前目录找不到，尝试在上一级目录找 (兼容旧结构)
+        config_file = Path(__file__).parent.parent / 'config.env'
+        
     config = {}
     
     if config_file.exists():
         with open(config_file, 'r', encoding='utf-8') as f:
             for line in f:
-                if line.strip() and not line.startswith('#') and '=' in line:
-                    key, value = line.strip().split('=', 1)
-                    config[key] = value.strip('"\'')
+                line = line.strip()
+                if line and not line.startswith('#') and '=' in line:
+                    key, value = line.split('=', 1)
+                    config[key.strip()] = value.strip().strip('"\'')
+    else:
+        print("⚠️ 警告: config.env 文件未找到，将使用默认值。")
     
     return config
 
 def save_env_config(config):
     """保存配置文件"""
-    config_file = Path(__file__).parent.parent / 'config.env'
+    config_file = Path(__file__).parent / 'config.env'
+    if not config_file.exists():
+        config_file = Path(__file__).parent.parent / 'config.env'
+
     with open(config_file, 'w', encoding='utf-8') as f:
-        f.write("# 远程开发环境配置文件\n\n")
-        for key, value in config.items():
-            f.write(f'{key}={value}\n')
+        f.write("# 🚀 远程开发环境 - 简化配置\n\n")
+        # 按照预设的顺序和分类写入，提高可读性
+        f.write("# 远程服务器配置\n")
+        f.write(f"SSH_ALIAS={config.get('SSH_ALIAS', 'remote-server')}\n")
+        f.write(f"REMOTE_HOST={config.get('REMOTE_HOST', '192.168.1.100')}\n")
+        f.write(f"REMOTE_USER={config.get('REMOTE_USER', 'user')}\n")
+        f.write(f"REMOTE_PROJECT_PATH={config.get('REMOTE_PROJECT_PATH', '/tmp/workspace')}\n")
+        f.write(f"SSH_PORT={config.get('SSH_PORT', 22)}\n\n")
+        
+        f.write("# 本地配置\n")
+        f.write(f"LOCAL_PATH={config.get('LOCAL_PATH', './work')}\n")
+        f.write(f"SYNC_EXCLUDE=\"{config.get('SYNC_EXCLUDE', '.git,node_modules')}\"\n\n")
+        
+        f.write("# 服务配置\n")
+        f.write(f"WEB_PORT={config.get('WEB_PORT', 8080)}\n")
+        f.write(f"API_PORT={config.get('API_PORT', 5001)}\n\n")
+
+        f.write("# 日志配置\n")
+        f.write(f"LOG_LEVEL={config.get('LOG_LEVEL', 'INFO')}\n")
+        f.write(f"LOG_FILE={config.get('LOG_FILE', 'dev.log')}\n")
 
 # =============================================================================
 # 系统监控
@@ -287,28 +319,34 @@ def index():
 # =============================================================================
 
 def main():
-    """主函数"""
+    """主函数，加载配置并启动应用"""
     global CONFIG
-    
     print("🚀 启动远程开发环境...")
     
-    CONFIG = load_env_config()
-    print(f"⚙️  加载配置: {len(CONFIG)} 项")
-    
-    # 启动指标广播
-    metrics_thread = threading.Thread(target=metrics_broadcaster, daemon=True)
-    metrics_thread.start()
-    
-    api_port = int(CONFIG.get('API_PORT', 5000))
+    try:
+        CONFIG = load_env_config()
+        print(f"⚙️  加载配置: {len(CONFIG)} 项")
+    except Exception as e:
+        print(f"❌ 加载配置失败: {e}", file=sys.stderr)
+        CONFIG = {}
+
+    # 从配置中获取端口，如果失败则使用默认值
+    api_port = int(CONFIG.get('API_PORT', 5001))
     print(f"🌐 服务端口: {api_port}")
     
+    # 启动后台监控线程
+    monitor_thread = threading.Thread(target=metrics_broadcaster, daemon=True)
+    monitor_thread.start()
+
+    # 启动Flask-SocketIO服务器
     try:
-        socketio.run(app, host='0.0.0.0', port=api_port, 
-                    debug=CONFIG.get('DEBUG', 'false').lower() == 'true')
-    except KeyboardInterrupt:
-        print("\n🛑 服务已停止")
-    except Exception as e:
-        print(f"❌ 启动失败: {e}")
+        socketio.run(app, host='0.0.0.0', port=api_port, debug=False)
+    except OSError as e:
+        print(f"❌ 启动失败: {e}", file=sys.stderr)
+        if "Address already in use" in str(e):
+            print(f"端口 {api_port} 已被占用。请检查或在 config.env 中更改 API_PORT。", file=sys.stderr)
+            if sys.platform == "darwin":
+                 print("在 macOS 上, 可尝试从 '系统偏好设置 -> 通用 -> Airdrop与接力' 中关闭 '隔空播放接收器' 服务。", file=sys.stderr)
         sys.exit(1)
 
 if __name__ == '__main__':
