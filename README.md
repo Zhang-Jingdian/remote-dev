@@ -124,7 +124,7 @@ sequenceDiagram
 ### 1️⃣ 一键安装
 ```bash
 # 克隆项目
-git clone <repository-url>
+git clone https://github.com/Zhang-Jingdian/remote-dev.git
 cd workspace
 
 # 安装依赖（只需要4个包！）
