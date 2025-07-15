@@ -1,21 +1,32 @@
-# 🚀 远程开发环境 - Docker配置
-# 版本: v4.0
-
+# �� 远程开发环境 - Docker配置
 services:
   app:
-    build:
-      context: ..
-      dockerfile: docker/Dockerfile
-    container_name: remote-dev-env
+    image: python:3.11-slim
+    container_name: ${CONTAINER_NAME:-remote-dev-env}
     ports:
-      - "9000:9000"
+      - "9000:9000" # 调试端口
+      - "3000:3000" # Node.js
+      - "5000:5000" # Python Flask
+      - "8000:8000" # Python Django
     volumes:
-      - /home/zjd/workspace:/workspace
+      - ${REMOTE_PATH:-/tmp/workspace}:/workspace
     working_dir: /workspace
-    command: sh -c "while true; do echo '[$(date)] 🐳 远程开发环境运行中'; sleep 10; done"
+    command: >
+      sh -c "
+        apt-get update && 
+        apt-get install -y curl git vim nano htop wget unzip && 
+        curl -fsSL https://deb.nodesource.com/setup_18.x | bash - && 
+        apt-get install -y nodejs && 
+        npm install -g npm@latest && 
+        while true; do echo '[$(date)] 🐳 远程开发环境运行中'; sleep 10; done
+      "
     environment:
       - PYTHONUNBUFFERED=1
       - TERM=xterm-256color
+      - NODE_ENV=development
+      - http_proxy=${HTTP_PROXY}
+      - https_proxy=${HTTPS_PROXY}
+      - no_proxy=${NO_PROXY}
     restart: unless-stopped
     networks:
       - dev-network
@@ -23,5 +34,3 @@ services:
 networks:
   dev-network:
     driver: bridge
-  logs:
-    driver: local

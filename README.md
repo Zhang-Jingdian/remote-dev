@@ -8,8 +8,58 @@
 - 🐳 **Docker容器**: 隔离的开发环境，支持Python、Node.js
 - 📁 **智能同步**: 自动同步本地代码到远程容器
 - 💻 **交互式Shell**: 美观的远程开发终端
-- 🔄 **文件监控**: 实时监控文件变化并自动同步
 - 🧪 **内置测试**: 完整的系统测试套件
+- 🎯 **智能检测**: 自动检测项目类型并安装对应依赖
+- 🚀 **一键开发**: `./dev dev` 启动完整开发流程
+
+## 🏗️ 架构图
+
+```mermaid
+graph TB
+    A[本地开发] --> B[dev脚本]
+    B --> C[SSH连接]
+    C --> D[远程服务器]
+    D --> E[Docker容器]
+    E --> F[Python环境]
+    E --> G[Node.js环境]
+    E --> H[开发工具]
+    
+    I[文件同步] --> J[rsync]
+    J --> K[远程工作目录]
+    K --> E
+    
+    L[代理支持] --> M[Clash代理]
+    M --> N[容器网络]
+    N --> E
+    
+    style A fill:#e1f5fe
+    style E fill:#f3e5f5
+    style M fill:#fff3e0
+```
+
+## 🔄 工作流程
+
+```mermaid
+sequenceDiagram
+    participant User as 开发者
+    participant Dev as dev脚本
+    participant SSH as SSH连接
+    participant Docker as Docker容器
+    participant Remote as 远程服务器
+    
+    User->>Dev: ./dev setup
+    Dev->>Dev: 检查依赖
+    Dev->>Dev: 创建配置
+    Dev->>Dev: 安装别名
+    
+    User->>Dev: ./dev dev
+    Dev->>SSH: 连接远程
+    SSH->>Remote: 启动容器
+    Remote->>Docker: 运行环境
+    Docker->>Docker: 安装工具
+    Docker->>SSH: 返回shell
+    SSH->>User: 进入开发环境
+```
 
 ## 🚀 快速开始
 
@@ -18,13 +68,17 @@
 ./dev setup
 ```
 
-### 2. 启动开发环境
+### 2. 一键开发模式
 ```bash
-dev up
+./dev dev
 ```
 
-### 3. 进入开发
+### 3. 传统方式
 ```bash
+# 启动环境
+dev up
+
+# 进入开发
 dev remote bash
 ```
 
@@ -33,13 +87,14 @@ dev remote bash
 | 命令 | 功能 | 示例 |
 |------|------|------|
 | `setup` | 初始化环境 | `./dev setup` |
+| `dev` | 一键开发模式 | `./dev dev` |
 | `up` | 启动容器 | `dev up` |
 | `down` | 停止容器 | `dev down` |
 | `remote` | 远程执行命令 | `dev remote bash` |
 | `sync` | 同步文件 | `dev sync` |
-| `watch` | 监控文件变化 | `dev watch` |
 | `status` | 查看状态 | `dev status` |
 | `logs` | 查看日志 | `dev logs` |
+| `test` | 运行测试 | `dev test` |
 
 ## 🛠️ 开发环境
 
@@ -57,9 +112,7 @@ workspace/
 ├── dev                    # 主CLI工具
 ├── config.env             # 配置文件
 ├── docker/                # Docker配置
-│   ├── Dockerfile         # 容器镜像
 │   ├── docker-compose.yml # 容器编排
-│   ├── requirements.txt   # Python依赖
 │   ├── .remote_bashrc    # Shell配置
 │   └── logs/             # 日志目录
 ├── work/                  # 工作空间
@@ -78,23 +131,23 @@ REMOTE_PATH=/home/zjd/workspace
 
 # 本地配置
 LOCAL_PATH=./work
+
+# 同步配置
+SYNC_EXCLUDE=".git,node_modules,*.log,*.tmp,.DS_Store,__pycache__"
+
+# 端口配置
+PYTHON_PORT=5000
+NODE_PORT=3000
+DJANGO_PORT=8000
+DEBUG_PORT=9000
+
+# 代理配置
+HTTP_PROXY=socks5://127.0.0.1:7897
+HTTPS_PROXY=socks5://127.0.0.1:7897
+NO_PROXY=localhost,127.0.0.1
 ```
 
 ## 🔧 自定义开发环境
-
-### 添加新的开发工具
-
-编辑 `docker/Dockerfile`：
-
-```dockerfile
-# 安装Go
-RUN wget https://go.dev/dl/go1.21.linux-amd64.tar.gz && \
-    tar -C /usr/local -xzf go1.21.linux-amd64.tar.gz && \
-    export PATH=$PATH:/usr/local/go/bin
-
-# 安装Rust
-RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
-```
 
 ### 自定义Shell环境
 
@@ -108,19 +161,22 @@ alias mytool='echo "Hello from remote!"'
 export MY_VAR="value"
 ```
 
-
 ## 📝 更新日志
 
-### v4.3 (最新)
-- 🚀 **多环境支持**: 添加Node.js、Git等开发工具
-- 🎯 **简化提示**: 优化setup后的用户引导
-- 📚 **精简文档**: 重写README，更简洁高效
-- 🔧 **增强配置**: 支持更多开发环境自定义
+### v5.0 (最新)
+- 🚀 **全面优化**: 精简代码结构，提升性能
+- 🎯 **一键开发**: 新增 `./dev dev` 命令，自动启动+同步+进入shell
+- 📚 **文档升级**: 添加Mermaid架构图和工作流程图
+- 🔧 **配置优化**: 支持自定义同步排除规则和端口配置
+- 🧪 **测试增强**: 完整的系统测试套件
+- 🎨 **界面美化**: 优化控制台输出，提升用户体验
 
-### v4.2
-- 🎯 **终极简化**: 将所有功能集成到单个`dev`脚本
-- 🚀 **一键setup**: 依赖检查+配置创建+别名安装一站式完成
-- 🧪 **内置测试**: 完整测试套件集成到dev脚本中
+### v4.4
+- 🚀 **一键开发模式**: 新增 `./dev dev` 命令
+- 🎯 **智能依赖检测**: 自动检测项目类型并安装对应依赖
+- 📚 **配置优化**: 支持自定义同步排除规则和端口配置
+- 🔧 **多端口支持**: 添加Node.js、Python Flask/Django端口映射
+- 🧪 **部署模式**: 新增 `./dev deploy` 命令
 
 ## 📄 许可证
 

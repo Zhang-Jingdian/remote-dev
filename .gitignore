@@ -1,100 +1,48 @@
-# 🚀 远程开发环境 .gitignore v4.0
-# ===============================================
-
-# 用户工作空间
-work/*
-!work/README.md
-
-# 运行时文件
-docker/logs/
-*.log
-*.tmp
-.venv/
-__pycache__/
-*.pyc
-
 # 系统文件
 .DS_Store
+Thumbs.db
+
+# 编辑器
+.vscode/
+.idea/
 *.swp
+*.swo
 *~
 
-# IDE文件
-.vscode/settings.json
-.idea/
+# 日志文件
+*.log
+logs/
 
-# Python
-*.egg-info/
-build/
+# 临时文件
+*.tmp
+*.temp
+.cache/
 
-# Docker相关
-docker-compose.override.yml
-.dockerignore.bak
-
-# 环境配置
-.env.local
-.env.*.local
-env/
+# 依赖目录
+node_modules/
+__pycache__/
+*.pyc
+.venv/
 venv/
-ENV/
-env.bak/
-venv.bak/
 
-# 密钥和证书
-*.pem
-*.key
-*.crt
-*.csr
-id_rsa*
-id_dsa*
-id_ecdsa*
-id_ed25519*
-known_hosts
-
-# 压缩文件
-*.zip
-*.tar.gz
-*.rar
-*.7z
-
-# 运行时文件
-*.pid
-*.lock
-.coverage
-htmlcov/
+# 构建输出
+dist/
+build/
+*.egg-info/
 
 # 测试覆盖率
 .coverage
+htmlcov/
 .pytest_cache/
 
-# Jupyter Notebook
-.ipynb_checkpoints
-
-# pyenv
-.python-version
-
-# pipenv
-Pipfile.lock
-
-# PEP 582
-__pypackages__/
-
-# Celery
-celerybeat-schedule
-celerybeat.pid
-
-# SageMath parsed files
-*.sage.py
-
-# Environments
+# 环境变量
 .env
-.venv
-env/
-venv/
-ENV/
-env.bak/
-venv.bak/
+.env.local
 
-# mypy
-.mypy_cache/
-.dmypy.json
-dmypy.json
+# Docker
+.dockerignore
+
+# 其他
+*.tar
+*.gz
+*.zip

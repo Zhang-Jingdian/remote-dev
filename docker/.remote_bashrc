@@ -1,42 +1,37 @@
-# 🚀 远程开发环境 - Shell配置
-# 简化版配置，专注于开发体验
+# 远程开发环境 Shell配置
 
-# 设置工作目录
-cd /workspace
+# 颜色定义
+PS1='\[\033[01;32m\]\u@\h\[\033[00m\]:\[\033[01;34m\]\w\[\033[00m\]\$ '
 
-# 显示欢迎信息
-echo "🚀 欢迎使用远程开发环境！"
-echo "📍 当前目录: $(pwd)"
-echo "🐳 容器ID: $HOSTNAME"
-echo "⏰ 时间: $(date)"
-echo "────────────────────────────────────────"
-
-# 设置别名
+# 别名
 alias ll='ls -la'
 alias la='ls -A'
 alias l='ls -CF'
 alias ..='cd ..'
 alias ...='cd ../..'
-alias py='python3'
+alias grep='grep --color=auto'
+alias fgrep='fgrep --color=auto'
+alias egrep='egrep --color=auto'
+
+# 开发工具别名
+alias py='python'
+alias py3='python3'
 alias pip='pip3'
 alias node='node'
 alias npm='npm'
 
-# 设置PS1提示符
-export PS1='\[\033[01;32m\]\u@\h\[\033[00m\]:\[\033[01;34m\]\w\[\033[00m\]\$ '
+# 项目相关
+alias dev='cd /workspace'
+alias status='docker ps'
+alias logs='docker logs -f remote-dev-env'
 
-# 设置历史记录
-export HISTSIZE=1000
-export HISTFILESIZE=2000
-export HISTCONTROL=ignoreboth
+# 环境变量
+export PYTHONPATH="/workspace:$PYTHONPATH"
+export NODE_PATH="/workspace/node_modules:$NODE_PATH"
 
-# 设置编辑器
-export EDITOR=vim
-
-# 显示当前环境信息
-echo "📦 Python版本: $(python --version 2>/dev/null || echo '未安装')"
-echo "🐍 pip版本: $(pip --version 2>/dev/null || echo '未安装')"
-echo "🟢 Node.js版本: $(node --version 2>/dev/null || echo '未安装')"
-echo "📦 npm版本: $(npm --version 2>/dev/null || echo '未安装')"
-echo "📁 工作目录: $(pwd)"
-echo "────────────────────────────────────────" 
+# 欢迎信息
+echo "🚀 远程开发环境已就绪"
+echo "📁 工作目录: /workspace"
+echo "🐳 容器状态: $(docker ps --filter name=remote-dev-env --format 'table {{.Status}}' | tail -n +2)"
+echo "💡 提示: 使用 'dev' 命令查看帮助"
+echo "" 
