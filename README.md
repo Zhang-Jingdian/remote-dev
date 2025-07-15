@@ -108,22 +108,6 @@ alias mytool='echo "Hello from remote!"'
 export MY_VAR="value"
 ```
 
-## 🐛 故障排除
-
-### 常见问题
-
-1. **fswatch未安装**
-   ```bash
-   brew install fswatch  # macOS
-   ```
-
-2. **SSH连接失败**
-   - 检查 `config.env` 中的远程主机配置
-   - 确保SSH密钥已配置
-
-3. **Docker启动失败**
-   - 检查Docker服务是否运行
-   - 确保端口未被占用
 
 ## 📝 更新日志
 
