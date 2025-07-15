@@ -98,24 +98,36 @@ sync_files() {
 
 # Docker容器管理
 docker_up() {
-    print_docker "启动Docker容器..."
+    print_docker "在远程服务器上启动Docker容器..."
     load_config
-    if docker-compose -f "${DOCKER_COMPOSE_FILE}" up -d; then
-        print_success "Docker容器启动成功"
-        echo -e "${GRAY}端口: ${DEBUG_PORT:-9000}, ${NODE_PORT:-3000}, ${PYTHON_PORT:-5000}, ${DJANGO_PORT:-8000}${NC}"
+    
+    # 先同步文件到远程
+    sync_files
+    
+    # 在远程服务器上启动容器
+    local remote_command="cd $REMOTE_PATH && docker compose -f docker/docker-compose.yml up -d"
+    
+    print_info "在 $REMOTE_HOST 上执行: $remote_command"
+    
+    if ssh "$REMOTE_HOST" "$remote_command"; then
+        print_success "远程Docker容器启动成功"
+        echo -e "${GRAY}端口: ${DEBUG_PORT:-9000}, ${NODE_PORT:-3000}${NC}"
     else
-        print_error "Docker容器启动失败"
+        print_error "远程Docker容器启动失败"
         exit 1
     fi
 }
 
 docker_down() {
-    print_docker "停止Docker容器..."
+    print_docker "在远程服务器上停止Docker容器..."
     load_config
-    if docker-compose -f "${DOCKER_COMPOSE_FILE}" down; then
-        print_success "Docker容器停止成功"
+    
+    local remote_command="cd $REMOTE_PATH && docker compose -f docker/docker-compose.yml down"
+    
+    if ssh "$REMOTE_HOST" "$remote_command"; then
+        print_success "远程Docker容器停止成功"
     else
-        print_error "Docker容器停止失败"
+        print_error "远程Docker容器停止失败"
         exit 1
     fi
 }
@@ -126,12 +138,14 @@ show_status() {
     echo
     
     load_config
-    local docker_status=$(docker-compose -f "${DOCKER_COMPOSE_FILE}" ps 2>/dev/null || echo "")
+    local remote_command="cd $REMOTE_PATH && docker compose -f docker/docker-compose.yml ps"
+    local docker_status=$(ssh "$REMOTE_HOST" "$remote_command" 2>/dev/null || echo "")
+    
     if echo "$docker_status" | grep -q "Up"; then
-        print_docker "容器运行中"
+        print_docker "远程容器运行中"
         echo "$docker_status" | grep -E "(NAME|${CONTAINER_NAME})" | sed 's/^/  /'
     else
-        echo -e "${RED}${DOCKER} 容器未运行${NC}"
+        echo -e "${RED}${DOCKER} 远程容器未运行${NC}"
     fi
     
     echo
@@ -155,9 +169,10 @@ show_status() {
 
 # 日志查看
 show_logs() {
-    print_info "显示Docker容器日志 (Ctrl+C 退出)..."
+    print_info "显示远程Docker容器日志 (Ctrl+C 退出)..."
     load_config
-    docker-compose -f "${DOCKER_COMPOSE_FILE}" logs -f
+    local remote_command="cd $REMOTE_PATH && docker compose -f docker/docker-compose.yml logs -f"
+    ssh "$REMOTE_HOST" "$remote_command"
 }
 
 # 远程命令执行
@@ -165,12 +180,21 @@ remote_run() {
     local command="$1"
     load_config
     
+    # 检查远程容器是否运行
+    local check_command="cd $REMOTE_PATH && docker compose -f docker/docker-compose.yml ps -q"
+    local container_id=$(ssh "$REMOTE_HOST" "$check_command" 2>/dev/null)
+    
+    if [[ -z "$container_id" ]]; then
+        print_error "远程容器未运行，请先执行: dev up"
+        exit 1
+    fi
+    
     if [[ -z "$command" ]]; then
         command="bash"
         print_info "启动交互式shell..."
     fi
     
-    print_info "连接到 $REMOTE_HOST 执行: $command"
+    print_info "连接到 $REMOTE_HOST 的容器执行: $command"
     sync_files
     
     if [[ "$command" == "bash" || "$command" == "sh" ]]; then
