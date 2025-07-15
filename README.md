@@ -1,105 +1,74 @@
 # 🚀 远程开发环境管理工具
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/version-v4.0-blue.svg)](.)
-[![Python](https://img.shields.io/badge/python-3.9+-green.svg)](https://python.org)
+一个简洁高效的远程开发环境管理工具，支持Python、Node.js等多种开发环境。
 
-> 一个简洁高效的远程开发环境管理工具，支持文件同步和Docker容器管理。
+## ✨ 特性
 
-## ✨ 核心特性
-
-- 🚀 **一键环境管理** - 简单命令启动/停止远程开发环境
-- 🔄 **智能文件同步** - 自动同步本地代码到远程服务器
-- 🐳 **Docker集成** - 统一的容器化开发环境
-- 💻 **交互式Shell** - 美观的远程命令行界面
-- ⚡ **高性能** - 优化的同步算法和精简的容器镜像
-
-## 🏗️ 系统架构
-
-```mermaid
-graph TB
-    subgraph "本地环境"
-        A[开发者] --> B[./dev CLI工具]
-        B --> C[文件监控]
-        C --> E[本地代码<br/>work/]
-    end
-    
-    subgraph "网络传输"
-        F[rsync + SSH]
-    end
-    
-    subgraph "远程服务器"
-        G[远程文件系统<br/>/home/zjd/workspace]
-        H[Docker容器<br/>remote-dev-env]
-        I[开发环境<br/>Python/Node.js/Git]
-    end
-    
-    E -->|同步| F
-    F -->|传输| G
-    G -->|挂载| H
-    H --> I
-    
-    B -->|SSH| H
-    
-    style A fill:#e1f5fe
-    style B fill:#f3e5f5
-    style H fill:#e8f5e8
-    style I fill:#fff3e0
-```
-
-## 📋 工作流程
-
-```mermaid
-sequenceDiagram
-    participant Dev as 开发者
-    participant CLI as ./dev CLI
-    participant Remote as 远程服务器
-    participant Docker as Docker容器
-    
-    Dev->>CLI: ./dev setup
-    CLI->>CLI: 检查依赖和配置
-    
-    Dev->>CLI: ./dev up
-    CLI->>Remote: SSH连接
-    CLI->>Docker: 启动容器
-    
-    Dev->>CLI: 编辑本地代码
-    CLI->>Remote: rsync同步文件
-    Remote->>Docker: 挂载更新文件
-    
-    Dev->>CLI: ./dev remote-run bash
-    CLI->>Docker: 交互式Shell
-    Docker-->>Dev: 美观的命令提示符
-    
-    Dev->>CLI: ./dev logs
-    CLI->>Docker: 获取日志
-    Docker-->>Dev: 实时日志输出
-```
+- 🚀 **一键启动**: `./dev setup` 完成环境初始化
+- 🐳 **Docker容器**: 隔离的开发环境，支持Python、Node.js
+- 📁 **智能同步**: 自动同步本地代码到远程容器
+- 💻 **交互式Shell**: 美观的远程开发终端
+- 🔄 **文件监控**: 实时监控文件变化并自动同步
+- 🧪 **内置测试**: 完整的系统测试套件
 
 ## 🚀 快速开始
 
-### 1. 环境要求
-
-- **Docker** 和 docker-compose
-- **SSH** 访问远程服务器
-- **rsync** (macOS内置)
-- **Python 3.9+** (可选)
-
-### 2. 一键安装
-
+### 1. 初始化环境
 ```bash
-# 克隆项目
-git clone <your-repo-url>
-cd remote-dev-tool
-
-# 初始化环境
 ./dev setup
-
-# 编辑配置文件
-vim config.env
 ```
 
-### 3. 配置文件 (`config.env`)
+### 2. 启动开发环境
+```bash
+dev up
+```
+
+### 3. 进入开发
+```bash
+dev remote bash
+```
+
+## 📋 命令参考
+
+| 命令 | 功能 | 示例 |
+|------|------|------|
+| `setup` | 初始化环境 | `./dev setup` |
+| `up` | 启动容器 | `dev up` |
+| `down` | 停止容器 | `dev down` |
+| `remote` | 远程执行命令 | `dev remote bash` |
+| `sync` | 同步文件 | `dev sync` |
+| `watch` | 监控文件变化 | `dev watch` |
+| `status` | 查看状态 | `dev status` |
+| `logs` | 查看日志 | `dev logs` |
+
+## 🛠️ 开发环境
+
+容器内预装工具：
+- **Python 3.11** + pip
+- **Node.js 18** + npm
+- **Git** + 常用开发工具
+- **Vim/Nano** 编辑器
+- **htop** 系统监控
+
+## 📁 项目结构
+
+```
+workspace/
+├── dev                    # 主CLI工具
+├── config.env             # 配置文件
+├── docker/                # Docker配置
+│   ├── Dockerfile         # 容器镜像
+│   ├── docker-compose.yml # 容器编排
+│   ├── requirements.txt   # Python依赖
+│   ├── .remote_bashrc    # Shell配置
+│   └── logs/             # 日志目录
+├── work/                  # 工作空间
+└── README.md             # 文档
+```
+
+## ⚙️ 配置
+
+编辑 `config.env` 自定义配置：
 
 ```bash
 # 远程服务器配置
@@ -111,193 +80,72 @@ REMOTE_PATH=/home/zjd/workspace
 LOCAL_PATH=./work
 ```
 
-### 4. 启动环境
+## 🔧 自定义开发环境
 
-```bash
-# 启动远程Docker环境
-./dev up
+### 添加新的开发工具
 
-# 查看状态
-./dev status
+编辑 `docker/Dockerfile`：
 
-# 进入交互式开发环境
-./dev remote-run bash
+```dockerfile
+# 安装Go
+RUN wget https://go.dev/dl/go1.21.linux-amd64.tar.gz && \
+    tar -C /usr/local -xzf go1.21.linux-amd64.tar.gz && \
+    export PATH=$PATH:/usr/local/go/bin
+
+# 安装Rust
+RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
 ```
-
-## 📖 命令参考
-
-### 核心命令
-
-| 命令 | 功能 | 示例 |
-|------|------|------|
-| `setup` | 初始化环境 | `./dev setup` |
-| `up` | 启动Docker容器 | `./dev up` |
-| `down` | 停止Docker容器 | `./dev down` |
-| `status` | 查看运行状态 | `./dev status` |
-| `sync` | 手动同步文件 | `./dev sync` |
-| `remote-run` | 执行远程命令 | `./dev remote-run "python3 main.py"` |
-
-### 开发命令
-
-| 命令 | 功能 | 示例 |
-|------|------|------|
-| `watch` | 监控文件变化 | `./dev watch` |
-| `logs` | 查看实时日志 | `./dev logs` |
-
-| `test` | 运行系统测试 | `./dev test` |
-
-## 💻 使用示例
-
-### 基础开发流程
-
-```bash
-# 1. 启动环境
-./dev up
-
-# 2. 编辑代码（本地）
-echo "print('Hello Remote!')" > work/my-project/hello.py
-
-# 3. 同步并运行（远程）
-./dev remote-run "python3 work/my-project/hello.py"
-
-# 4. 进入交互式开发
-./dev remote-run bash
-```
-
-### 交互式Shell特性
-
-进入远程Shell后，您将看到：
-
-```bash
-🚀 欢迎进入远程Docker开发环境！
-📁 工作目录: /workspace
-💡 你的本地代码已同步到此容器中
-
-🐳 remote-dev:/workspace$ 
-```
-
-内置便捷别名：
-- `ll` - 详细文件列表
-- `py` - Python3快捷方式
-- `c` - 清屏
-- `..` - 返回上级目录
-
-## 🎨 项目结构
-
-```
-remote-dev-tool/
-├── dev                    # 主CLI工具
-├── config.env             # 配置文件
-├── docker/                # Docker配置
-│   ├── Dockerfile         # 容器镜像
-│   ├── docker-compose.yml # 容器编排
-│   ├── .remote_bashrc     # 完整版Shell配置
-│   └── .remote_bashrc_simple # 简化版Shell配置
-├── work/                  # 用户工作空间
-│   └── README.md
-└── README.md             # 项目文档
-```
-
-## ⚡ 性能优化
-
-### 同步优化
-- 智能排除模式，减少不必要文件传输
-- 增量同步，只传输变更文件
-- 压缩传输，节省网络带宽
-
-### 容器优化
-- 精简Docker镜像，快速启动
-- 优化资源配置，降低内存占用
-- 智能重启策略，提高稳定性
-
-## 🛠️ 高级配置
 
 ### 自定义Shell环境
 
-编辑 `docker/.remote_bashrc` 来自定义您的远程Shell环境：
+编辑 `docker/.remote_bashrc`：
 
 ```bash
 # 添加自定义别名
-alias mycommand='echo "Hello World"'
+alias mytool='echo "Hello from remote!"'
 
 # 设置环境变量
 export MY_VAR="value"
-
-# 添加自定义函数
-function myfunction() {
-    echo "Custom function"
-}
 ```
 
-### 文件监控
-
-启用实时文件监控（需要安装fswatch）：
-
-```bash
-# macOS
-brew install fswatch
-
-# 启动监控
-./dev watch
-```
-
-## 🔧 故障排除
+## 🐛 故障排除
 
 ### 常见问题
 
-**Q: 容器启动失败**
-```bash
-# 检查Docker状态
-docker ps -a
+1. **fswatch未安装**
+   ```bash
+   brew install fswatch  # macOS
+   ```
 
-# 查看容器日志
-./dev logs
+2. **SSH连接失败**
+   - 检查 `config.env` 中的远程主机配置
+   - 确保SSH密钥已配置
 
-# 重启容器
-./dev down && ./dev up
-```
-
-**Q: 文件同步失败**
-```bash
-# 检查SSH连接
-ssh 192.168.0.105
-
-# 手动同步测试
-./dev sync
-```
-
-**Q: 网络连接问题**
-```bash
-# 检查网络连通性
-ping 192.168.0.105
-
-# 测试系统
-./dev test
-```
+3. **Docker启动失败**
+   - 检查Docker服务是否运行
+   - 确保端口未被占用
 
 ## 📝 更新日志
 
-### v4.0 (2025-07-15)
-- 🚀 全面重构，提升性能和用户体验
-- ✨ 新增美观的交互式Shell界面
-- 🔧 优化文件同步算法
-- 📚 更新文档和架构图
+### v4.3 (最新)
+- 🚀 **多环境支持**: 添加Node.js、Git等开发工具
+- 🎯 **简化提示**: 优化setup后的用户引导
+- 📚 **精简文档**: 重写README，更简洁高效
+- 🔧 **增强配置**: 支持更多开发环境自定义
 
-### v3.1 (2025-07-14)
-- 🐳 Docker容器集成
-
-- 📁 智能文件同步
+### v4.2
+- 🎯 **终极简化**: 将所有功能集成到单个`dev`脚本
+- 🚀 **一键setup**: 依赖检查+配置创建+别名安装一站式完成
+- 🧪 **内置测试**: 完整测试套件集成到dev脚本中
 
 ## 📄 许可证
 
-本项目采用 MIT 许可证 - 查看 [LICENSE](LICENSE) 文件了解详情。
+MIT License
 
 ## 👨‍💻 作者
 
-**Zhang-Jingdian**
-- 📧 Email: 2157429750@qq.com
-- 🚀 Version: v4.0
+Zhang-Jingdian (2157429750@qq.com)
 
 ---
 
-> 💡 **提示**: 如需帮助或有任何问题，请查看故障排除部分或提交Issue。
+🚀 **Happy Coding!** 享受高效的远程开发体验！

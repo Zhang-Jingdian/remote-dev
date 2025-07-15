@@ -6,14 +6,12 @@ work/*
 !work/README.md
 
 # 运行时文件
-logs/
+docker/logs/
 *.log
 *.tmp
 .venv/
 __pycache__/
 *.pyc
-node_modules/
-dist/
 
 # 系统文件
 .DS_Store

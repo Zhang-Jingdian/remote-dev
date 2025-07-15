@@ -1,5 +1,20 @@
-# 使用官方Python基础镜像 
+# 使用官方Python基础镜像，并安装Node.js和其他开发工具
 FROM python:3.11-slim
+
+# 安装系统依赖和Node.js
+RUN apt-get update && apt-get install -y \
+    curl \
+    git \
+    vim \
+    nano \
+    htop \
+    wget \
+    unzip \
+    && curl -fsSL https://deb.nodesource.com/setup_18.x | bash - \
+    && apt-get install -y nodejs \
+    && npm install -g npm@latest \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
 
 # 设置工作目录
 WORKDIR /workspace

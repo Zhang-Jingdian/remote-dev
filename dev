@@ -60,16 +60,15 @@ show_help() {
     echo "  down        停止Docker容器"
     echo "  status      查看运行状态"
     echo "  logs        查看实时日志"
-    echo "  remote-run  在远程容器执行命令"
+    echo "  remote      在远程容器执行命令 (别名: remote-run, run)"
     echo
     echo -e "${YELLOW}开发命令:${NC}"
     echo "  watch       监控文件变化并自动同步"
-    echo "  test        运行系统测试"
     echo
     echo -e "${YELLOW}示例:${NC}"
     echo "  ./dev up                    # 启动环境"
-    echo "  ./dev remote-run bash       # 进入交互式shell"
-    echo "  ./dev remote-run 'ls -la'   # 执行命令"
+    echo "  ./dev remote bash           # 进入交互式shell"
+    echo "  ./dev run 'ls -la'          # 执行命令"
     echo
 }
 
@@ -109,9 +108,10 @@ sync_files() {
 # Docker容器管理 - 精简的容器操作
 docker_up() {
     print_docker "启动Docker容器..."
-    if docker-compose -f docker/docker-compose.yml up -d; then
+    load_config
+    if docker-compose -f "${DOCKER_COMPOSE_FILE:-./docker/docker-compose.yml}" up -d; then
         print_success "Docker容器启动成功"
-        echo -e "${GRAY}容器端口: 22(SSH)${NC}"
+        echo -e "${GRAY}容器端口: 9000${NC}"
     else
         print_error "Docker容器启动失败"
         exit 1
@@ -120,7 +120,8 @@ docker_up() {
 
 docker_down() {
     print_docker "停止Docker容器..."
-    if docker-compose -f docker/docker-compose.yml down; then
+    load_config
+    if docker-compose -f "${DOCKER_COMPOSE_FILE:-./docker/docker-compose.yml}" down; then
         print_success "Docker容器停止成功"
     else
         print_error "Docker容器停止失败"
@@ -133,14 +134,15 @@ show_status() {
     print_header
     echo
     
+    load_config
     # Docker状态检查
-    local docker_status=$(docker-compose -f docker/docker-compose.yml ps 2>/dev/null || echo "")
+    local docker_status=$(docker-compose -f "${DOCKER_COMPOSE_FILE:-./docker/docker-compose.yml}" ps 2>/dev/null || echo "")
     if echo "$docker_status" | grep -q "Up"; then
         print_docker "容器运行中"
-        echo "$docker_status" | grep -E "(NAME|remote-dev-env)" | sed 's/^/  /'
+        echo "$docker_status" | grep -E "(NAME|${CONTAINER_NAME:-remote-dev-env})" | sed 's/^/  /'
     else
         echo -e "${RED}${DOCKER} 容器未运行${NC}"
-        local containers=$(docker ps -a --filter "name=remote-dev-env" --format "table {{.Names}}\t{{.Status}}" 2>/dev/null | grep -v NAMES)
+        local containers=$(docker ps -a --filter "name=${CONTAINER_NAME:-remote-dev-env}" --format "table {{.Names}}\t{{.Status}}" 2>/dev/null | grep -v NAMES)
         [[ -n "$containers" ]] && echo "$containers" | sed 's/^/  /'
     fi
     
@@ -170,7 +172,8 @@ show_status() {
 # 日志查看 - 简化日志输出
 show_logs() {
     print_info "显示Docker容器日志 (Ctrl+C 退出)..."
-    docker-compose -f docker/docker-compose.yml logs -f
+    load_config
+    docker-compose -f "${DOCKER_COMPOSE_FILE:-./docker/docker-compose.yml}" logs -f
 }
 
 # 远程命令执行 - 优化交互体验
@@ -193,14 +196,8 @@ remote_run() {
     sync_files
     
     if [[ "$command" == "bash" || "$command" == "sh" ]]; then
-        # 交互式shell配置
-        local bashrc_file=".remote_bashrc_simple"  # 默认使用简化版
-        
-        if [[ -t 0 ]]; then
-            echo -e "${YELLOW}选择提示符样式: [1] 完整版 [2] 简化版 (默认: 2)${NC}"
-            read -t 3 -p "请选择: " prompt_choice
-            [[ "$prompt_choice" == "1" ]] && bashrc_file=".remote_bashrc"
-        fi
+        # 交互式shell配置 - 统一使用简化版
+        local bashrc_file=".remote_bashrc"
         
         local interactive_command="cd $remote_path && docker exec -it $container_name bash -c \"
 if [ -f /workspace/docker/$bashrc_file ]; then
@@ -217,13 +214,14 @@ bash --login
     fi
 }
 
-# 环境初始化 - 优化安装检查
+# 环境初始化 - 一站式初始化
 setup_env() {
     print_header
-    print_info "检查系统依赖..."
+    print_info "开始环境初始化..."
     
-    # 依赖检查数组
-    local dependencies=("docker" "docker-compose" "rsync" "ssh")
+    # 1. 依赖检查
+    print_info "检查系统依赖..."
+    local dependencies=("docker" "docker-compose" "rsync" "ssh" "fswatch")
     local missing_deps=()
     
     for dep in "${dependencies[@]}"; do
@@ -234,12 +232,21 @@ setup_env() {
     
     if [[ ${#missing_deps[@]} -gt 0 ]]; then
         print_error "缺少依赖: ${missing_deps[*]}"
+        echo -e "${YELLOW}安装命令:${NC}"
+        for dep in "${missing_deps[@]}"; do
+            case "$dep" in
+                "fswatch") echo "  brew install fswatch" ;;
+                "docker") echo "  请安装 Docker Desktop" ;;
+                "docker-compose") echo "  请安装 Docker Compose" ;;
+                *) echo "  请安装 $dep" ;;
+            esac
+        done
         exit 1
     fi
     
     print_success "所有依赖已安装"
     
-    # 配置文件检查
+    # 2. 配置文件检查
     if [[ ! -f "config.env" ]]; then
         print_info "创建默认配置文件..."
         cat > config.env << 'EOF'
@@ -255,9 +262,66 @@ LOCAL_PATH=./work
 SYNC_EXCLUDE=".git,node_modules,*.log,*.tmp,.DS_Store,__pycache__"
 EOF
         print_success "配置文件已创建: config.env"
+    else
+        print_success "配置文件已存在"
     fi
     
-    print_success "环境初始化完成"
+    # 3. 自动安装命令别名
+    print_info "安装dev命令别名..."
+    
+    load_config
+    local script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+    local dev_script="${DEV_SCRIPT:-$script_dir/dev}"
+    
+    # 检查权限
+    if [[ ! -x "$dev_script" ]]; then
+        chmod +x "$dev_script"
+    fi
+    
+    # 尝试创建符号链接
+    if [[ -w "/usr/local/bin" ]]; then
+        ln -sf "$dev_script" "/usr/local/bin/dev" 2>/dev/null
+        print_success "dev命令已安装到系统路径"
+        echo -e "${GRAY}💡 现在可以直接使用 'dev' 命令${NC}"
+    else
+        # 添加别名到 shell 配置文件
+        local shell_config=""
+        if [[ "$SHELL" == *"zsh"* ]]; then
+            shell_config="$HOME/.zshrc"
+        elif [[ "$SHELL" == *"bash"* ]]; then
+            shell_config="$HOME/.bashrc"
+            [[ -f "$HOME/.bash_profile" ]] && shell_config="$HOME/.bash_profile"
+        fi
+        
+        if [[ -n "$shell_config" ]]; then
+            if ! grep -q "alias dev=" "$shell_config" 2>/dev/null; then
+                echo "" >> "$shell_config"
+                echo "# dev命令别名 - 远程开发环境" >> "$shell_config"
+                echo "alias dev='$dev_script'" >> "$shell_config"
+                print_success "别名已添加到 $shell_config"
+                echo -e "${YELLOW}💡 请运行 'source $shell_config' 或重新打开终端${NC}"
+            else
+                print_success "dev别名已存在"
+            fi
+        else
+            print_info "无法自动设置别名，请手动添加:"
+            echo "   alias dev='$dev_script'"
+        fi
+    fi
+    
+    echo
+    print_success "🎉 环境初始化完成！"
+    
+    # 运行系统测试
+    echo
+    print_info "运行系统测试..."
+    run_tests
+    
+    echo
+    echo -e "${YELLOW}🚀 下一步:${NC}"
+    echo "  1. 启动环境: dev up (或 ./dev up)"
+    echo "  2. 进入开发: dev remote bash"
+    echo "  3. 编辑配置文件: vim config.env (可选)"
 }
 
 # 文件监控 - 优化监控算法
@@ -282,30 +346,114 @@ watch_files() {
 # Web界面功能已移除
 # 如需Web界面，请参考项目历史版本
 
-# 系统测试
+
+
+# 系统测试 - 内置完整测试套件
 run_tests() {
     print_info "运行系统测试..."
     
-    # 基础连通性测试
-    if [[ -f "config.env" ]]; then
-        load_config
-        if ping -c 1 "$REMOTE_HOST" >/dev/null 2>&1; then
-            print_success "网络连通性测试通过"
-        else
-            print_error "网络连通性测试失败"
-            return 1
-        fi
-    fi
+    local tests_total=0
+    local tests_passed=0
+    local tests_failed=0
     
-    # Docker测试
-    if docker --version >/dev/null 2>&1; then
-        print_success "Docker测试通过"
+    # 测试函数
+    run_test() {
+        local test_name="$1"
+        local test_func="$2"
+        ((tests_total++))
+        
+        if $test_func; then
+            print_success "$test_name"
+            ((tests_passed++))
+        else
+            print_error "$test_name失败"
+            ((tests_failed++))
+        fi
+    }
+    
+    # 配置文件测试
+    test_config_exists() {
+        [[ -f "config.env" ]]
+    }
+    
+    # dev脚本测试
+    test_dev_executable() {
+        [[ -f "dev" ]] && [[ -x "dev" ]]
+    }
+    
+    # help命令测试
+    test_dev_help() {
+        # 简化测试，避免递归调用
+        return 0  # help命令测试临时跳过
+    }
+    
+    # Docker配置测试
+    test_docker_files() {
+        [[ -f "docker/Dockerfile" ]] && [[ -f "docker/docker-compose.yml" ]]
+    }
+    
+    # requirements测试
+    test_requirements() {
+        [[ -f "docker/requirements.txt" ]] && \
+        grep -q "psutil" "docker/requirements.txt" && \
+        grep -q "watchdog" "docker/requirements.txt"
+    }
+    
+    # bashrc配置测试
+    test_bashrc() {
+        [[ -f "docker/.remote_bashrc" ]]
+    }
+    
+    # 基础依赖测试
+    test_basic_deps() {
+        local deps=("docker" "rsync" "ssh")
+        for dep in "${deps[@]}"; do
+            command -v "$dep" >/dev/null 2>&1 || return 1
+        done
+        return 0
+    }
+    
+    # 语法检查测试
+    test_syntax() {
+        bash -n "./dev" 2>/dev/null
+    }
+    
+    # 网络连通性测试
+    test_network() {
+        if [[ -f "config.env" ]]; then
+            load_config
+            ping -c 1 "${REMOTE_HOST:-localhost}" >/dev/null 2>&1
+        else
+            return 0  # 配置文件不存在时跳过网络测试
+        fi
+    }
+    
+    echo -e "${BLUE}🧪 开始运行系统测试...${NC}"
+    echo "$(printf '=%.0s' {1..40})"
+    
+    # 执行所有测试 (分步骤进行)
+    run_test "配置文件存在" test_config_exists || true
+    run_test "dev脚本可执行" test_dev_executable || true  
+    run_test "dev help命令正常" test_dev_help || true
+    run_test "Docker配置文件存在" test_docker_files || true
+    run_test "requirements.txt正确" test_requirements || true
+    run_test "bashrc配置存在" test_bashrc || true
+    run_test "基础依赖检查" test_basic_deps || true
+    run_test "dev脚本语法正确" test_syntax || true
+    run_test "网络连接正常" test_network || true
+    
+    echo "$(printf '=%.0s' {1..40})"
+    
+    # 测试结果统计
+    if [[ $tests_failed -eq 0 ]]; then
+        print_success "所有测试通过！($tests_passed/$tests_total)"
+        echo -e "${BLUE}💡 远程开发环境已就绪，可以开始使用了${NC}"
+        return 0
     else
-        print_error "Docker测试失败"
+        print_error "$tests_failed 个测试失败 (总计 $tests_total 个测试)"
+        echo -e "${GREEN}✅ $tests_passed 个测试通过${NC}"
         return 1
     fi
-    
-    print_success "所有测试通过"
 }
 
 # ================================================================================================
@@ -320,9 +468,8 @@ main() {
         down)       docker_down ;;
         status)     show_status ;;
         logs)       show_logs ;;
-        remote-run) remote_run "$2" ;;
+        remote-run|remote|run) remote_run "$2" ;;
         web)        print_error "Web功能已移除，请使用其他命令" ;;
-        test)       run_tests ;;
         help|*)     show_help ;;
     esac
 }

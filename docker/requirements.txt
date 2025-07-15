@@ -2,17 +2,8 @@
 # 作者: Zhang-Jingdian (2157429750@qq.com)
 # 创建时间: 2025年7月14日
 
-# Web框架
-Flask==3.0.0
-Flask-CORS==4.0.0
-Flask-SocketIO==5.3.6
-
 # 系统监控
 psutil==5.9.6
 
-# WebSocket支持
-python-socketio==5.10.0
-
 # 其他工具
-Werkzeug==3.0.1
 watchdog>=3.0.0 
