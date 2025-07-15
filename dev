@@ -64,7 +64,6 @@ show_help() {
     echo
     echo -e "${YELLOW}开发命令:${NC}"
     echo "  watch       监控文件变化并自动同步"
-    echo "  web         启动Web管理界面"
     echo "  test        运行系统测试"
     echo
     echo -e "${YELLOW}示例:${NC}"
@@ -112,7 +111,7 @@ docker_up() {
     print_docker "启动Docker容器..."
     if docker-compose -f docker/docker-compose.yml up -d; then
         print_success "Docker容器启动成功"
-        echo -e "${GRAY}端口映射: 8080(Web) 9000(API)${NC}"
+        echo -e "${GRAY}容器端口: 22(SSH)${NC}"
     else
         print_error "Docker容器启动失败"
         exit 1
@@ -280,34 +279,8 @@ watch_files() {
     done
 }
 
-# Web界面启动
-start_web() {
-    print_info "启动Web管理界面..."
-    
-    # 启动后端API
-    if [[ -f "main.py" ]]; then
-        print_info "启动后端API服务 (端口 9000)..."
-        python3 main.py &
-        local api_pid=$!
-    fi
-    
-    # 启动前端开发服务器
-    if [[ -d "web" ]]; then
-        print_info "启动前端开发服务器 (端口 3000)..."
-        cd web && npm run dev &
-        local web_pid=$!
-        cd ..
-    fi
-    
-    print_success "Web界面已启动"
-    echo -e "${GRAY}API: http://localhost:9000${NC}"
-    echo -e "${GRAY}Web: http://localhost:3000${NC}"
-    echo -e "${YELLOW}按 Ctrl+C 停止服务${NC}"
-    
-    # 等待用户中断
-    trap 'kill $api_pid $web_pid 2>/dev/null; print_info "服务已停止"; exit 0' INT
-    wait
-}
+# Web界面功能已移除
+# 如需Web界面，请参考项目历史版本
 
 # 系统测试
 run_tests() {
@@ -348,7 +321,7 @@ main() {
         status)     show_status ;;
         logs)       show_logs ;;
         remote-run) remote_run "$2" ;;
-        web)        start_web ;;
+        web)        print_error "Web功能已移除，请使用其他命令" ;;
         test)       run_tests ;;
         help|*)     show_help ;;
     esac
