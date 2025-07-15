@@ -134,8 +134,8 @@ def main():
         print("💡 项目重构成功，可以开始使用了")
         print("\n🚀 下一步:")
         print("  1. 运行 './dev setup' 初始化环境")
-        print("  2. 运行 'python main.py' 启动后端API")
-        print("  3. 运行 'cd web && npm run dev' 启动前端")
+        print("  2. 运行 './dev web' 启动完整的开发环境（推荐）")
+        print("  3. 或者分别启动: 'python main.py' + 'cd web && npm run dev'")
         return 0
     else:
         print(f"❌ {failed_tests} 个测试失败")

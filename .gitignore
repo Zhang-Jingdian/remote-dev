@@ -1,80 +1,32 @@
-# =============================================================================
-# .gitignore - 远程开发环境项目
-# 作者: Zhang-Jingdian
-# 邮箱: 2157429750@qq.com
-# 创建时间: 2025年7月14日
-# =============================================================================
+# 🚀 远程开发环境 .gitignore v4.0
+# ===============================================
 
-# 用户工作空间 - 不跟踪用户的项目文件
+# 用户工作空间
 work/*
 !work/README.md
 
-# 日志文件
+# 运行时文件
 logs/
 *.log
-*.log.*
-
-# 数据文件
-data/
-*.db
-*.sqlite
-*.sqlite3
-
-# 备份文件
-backups/
-backup_*
-
-# 临时文件
 *.tmp
-*.temp
+.venv/
+__pycache__/
+*.pyc
+node_modules/
+dist/
+
+# 系统文件
+.DS_Store
 *.swp
-*.swo
 *~
 
-# IDE/编辑器文件
-.vscode/
+# IDE文件
+.vscode/settings.json
 .idea/
-*.sublime-*
-.settings/
-.project
-.classpath
 
-# 操作系统文件
-.DS_Store
-.DS_Store?
-._*
-.Spotlight-V100
-.Trashes
-ehthumbs.db
-Thumbs.db
-desktop.ini
-
-# Python文件
-__pycache__/
-*.py[cod]
-*$py.class
-*.so
-.Python
-build/
-develop-eggs/
-dist/
-downloads/
-eggs/
-.eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
-wheels/
-pip-wheel-metadata/
-share/python-wheels/
+# Python
 *.egg-info/
-.installed.cfg
-*.egg
-MANIFEST
-
-# Node.js文件
+build/
 node_modules/
 npm-debug.log*
 yarn-debug.log*

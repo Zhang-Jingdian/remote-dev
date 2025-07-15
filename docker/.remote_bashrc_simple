@@ -1,0 +1,28 @@
+# 🚀 远程Docker开发环境 - 简化版 .bashrc
+# 作者: Zhang-Jingdian
+
+# 基础设置
+export TERM=xterm-256color
+export EDITOR=nano
+export LANG=C.UTF-8
+
+# 简洁美观的提示符
+export PS1='\[\e[1;36m\]🐳 remote-dev\[\e[0m\]:\[\e[1;34m\]\w\[\e[0m\]\$ '
+
+# 有用的别名
+alias ll='ls -alF --color=auto'
+alias la='ls -A --color=auto'
+alias ls='ls --color=auto'
+alias ..='cd ..'
+alias ...='cd ../..'
+alias python='python3'
+alias pip='pip3'
+alias py='python3'
+alias c='clear'
+alias h='history'
+
+# 欢迎消息
+echo -e '\e[1;36m🚀 欢迎进入远程Docker开发环境！\e[0m'
+echo -e '\e[0;37m📁 工作目录: \e[1;34m'$(pwd)'\e[0m'
+echo -e '\e[0;37m💡 你的本地代码已同步到此容器中\e[0m'
+echo '' 

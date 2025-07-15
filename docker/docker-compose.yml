@@ -1,56 +1,28 @@
-version: '3.8'
-
-# 🚀 远程开发环境 - 简化Docker配置
-# 作者: Zhang-Jingdian (2157429750@qq.com)
-# 创建时间: 2025年7月14日
+# 🚀 远程开发环境 - Docker配置
+# 版本: v4.0
 
 services:
-  # 主应用服务
   app:
     build:
       context: ..
       dockerfile: docker/Dockerfile
     container_name: remote-dev-env
     ports:
-      - "8080:8080" # Web服务端口
-      - "5001:5001" # API服务端口
+      - "8080:8080"
+      - "9000:9000"
     volumes:
-      - ../main.py:/app/main.py
-      - ../config.env:/app/config.env
-      - ../logs:/app/logs
-    working_dir: /app
-    command: python main.py
+      - /home/zjd/workspace:/workspace
+    working_dir: /workspace
+    command: sh -c "while true; do echo '[$(date)] 🐳 远程开发环境运行中'; sleep 10; done"
     environment:
       - PYTHONUNBUFFERED=1
-      - PORT=8080
-      - API_PORT=5001
+      - TERM=xterm-256color
     restart: unless-stopped
     networks:
       - dev-network
 
-  # Vue3 前端开发服务器（开发时使用）
-  frontend:
-    image: node:18-alpine
-    container_name: remote-dev-frontend
-    ports:
-      - "3000:3000"
-    volumes:
-      - ../web:/app
-    working_dir: /app
-    command: sh -c "npm install && npm run dev"
-    environment:
-      - NODE_ENV=development
-    depends_on:
-      - app
-    networks:
-      - dev-network
-    profiles:
-      - dev # 只在开发模式下启动
-
 networks:
   dev-network:
     driver: bridge
-
-volumes:
   logs:
     driver: local

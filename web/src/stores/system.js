@@ -13,7 +13,7 @@ export const useSystemStore = defineStore('system', {
     state: () => ({
         // WebSocket连接
         socket: null,
-        isConnected: false,
+        connected: false,
 
         // 系统信息
         systemInfo: {
@@ -98,19 +98,33 @@ export const useSystemStore = defineStore('system', {
     actions: {
         // 初始化WebSocket连接
         initWebSocket() {
-            this.socket = io('ws://localhost:8080', {
+            // 从 window.location 获取主机和端口，更具动态性
+            const backendHost = window.location.hostname;
+            const backendPort = import.meta.env.VITE_BACKEND_PORT || '9000'; // 使用新的默认端口
+            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const socketURL = `${protocol}//${backendHost}:${backendPort}`;
+
+            console.log(`尝试连接 WebSocket: ${socketURL}`);
+
+            this.socket = io(socketURL, {
                 transports: ['websocket'],
-                upgrade: false
+                upgrade: false,
+                forceNew: true
             })
 
             this.socket.on('connect', () => {
-                this.connected = true
                 console.log('WebSocket连接已建立')
+                this.connected = true
             })
 
             this.socket.on('disconnect', () => {
-                this.connected = false
                 console.log('WebSocket连接已断开')
+                this.connected = false
+            })
+
+            this.socket.on('error', (error) => {
+                console.error('WebSocket连接错误:', error)
+                this.connected = false
             })
 
             this.socket.on('metrics_updated', (data) => {
@@ -240,28 +254,27 @@ export const useSystemStore = defineStore('system', {
         },
 
         connectSocket() {
-            if (this.socket && this.isConnected) return
+            if (this.socket && this.connected) return
 
-            this.socket = io({ transports: ['websocket'] })
+            const backendHost = window.location.hostname;
+            const backendPort = import.meta.env.VITE_BACKEND_PORT || '9000';
+            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const socketURL = `${protocol}//${backendHost}:${backendPort}`;
+            console.log(`正在重新连接 WebSocket: ${socketURL}`);
+
+            this.socket = io(socketURL, {
+                transports: ['websocket'],
+                forceNew: true
+            })
 
             this.socket.on('connect', () => {
-                this.isConnected = true
-                console.log('Socket.IO connected!')
-            });
+                this.connected = true
+                console.log('WebSocket重新连接成功')
+            })
 
             this.socket.on('disconnect', () => {
-                this.isConnected = false
-                console.log('Socket.IO disconnected!');
-            });
-
-            this.socket.on('system_metrics', (data) => {
-                this.metrics = data
-                const history = [...this.cpuHistory, data.cpu_usage]
-                if (history.length > 20) {
-                    history.shift()
-                }
-                this.cpuHistory = history
-            });
+                this.connected = false
+            })
         },
 
         disconnectSocket() {

@@ -158,15 +158,43 @@ def health_check():
 
 @app.route('/api/metrics')
 def get_metrics():
-    """获取当前系统指标"""
-    metrics = get_system_metrics()
-    docker_status = get_docker_status()
-    ssh_status = check_ssh_connection()
-    
+    """获取系统指标"""
+    return jsonify(get_system_metrics())
+
+@app.route('/api/system/info')
+def get_system_info():
+    """获取系统信息"""
     return jsonify({
-        'system': metrics,
-        'docker': docker_status,
-        'ssh_connected': ssh_status
+        'author': 'Zhang-Jingdian',
+        'email': '2157429750@qq.com',
+        'version': 'v3.1',
+        'createDate': '2025-07-14',
+        'description': '远程开发环境管理工具'
+    })
+
+@app.route('/api/cluster/status')
+def get_cluster_status():
+    """获取集群状态"""
+    # 模拟集群数据，因为这是单机版工具
+    return jsonify({
+        'activeServers': ['localhost'],
+        'failedServers': [],
+        'totalNodes': 1,
+        'onlineNodes': 1
+    })
+
+@app.route('/api/plugins')
+def get_plugins():
+    """获取插件列表"""
+    # 模拟插件数据
+    return jsonify({
+        'total': 3,
+        'enabled': 2,
+        'available': [
+            {'name': 'Docker Manager', 'enabled': True, 'version': '1.0.0'},
+            {'name': 'File Sync', 'enabled': True, 'version': '1.2.1'},
+            {'name': 'Log Monitor', 'enabled': False, 'version': '0.8.5'}
+        ]
     })
 
 @app.route('/api/metrics/history')
@@ -193,6 +221,47 @@ def update_config():
     except Exception as e:
         return jsonify({'error': f'配置更新失败: {str(e)}'}), 500
 
+@app.route('/api/config')
+def get_app_config():
+    """获取应用配置"""
+    return jsonify(load_env_config())
+
+@app.route('/api/logs')
+def get_remote_logs():
+    """获取远程Docker容器日志"""
+    try:
+        # 检查 docker-compose.yml 是否存在
+        if not os.path.exists('docker/docker-compose.yml'):
+            return jsonify({
+                'logs': ['🔍 Docker Compose 文件未找到', '💡 请先运行 ./dev up 启动容器']
+            })
+        
+        # 尝试获取容器日志
+        result = subprocess.run(
+            ['docker-compose', '-f', 'docker/docker-compose.yml', 'logs', '--tail=50'],
+            capture_output=True, text=True, timeout=10
+        )
+        
+        if result.returncode == 0:
+            logs = result.stdout.strip().split('\n') if result.stdout.strip() else ['📝 暂无日志内容']
+        else:
+            logs = [
+                '⚠️  无法获取容器日志',
+                '💡 可能的原因：',
+                '   - Docker 容器未运行 (运行 ./dev up 启动)',
+                '   - Docker 服务未启动',
+                '   - 权限不足',
+                f'   - 错误详情: {result.stderr.strip()}'
+            ]
+        
+        return jsonify({'logs': logs})
+    except subprocess.TimeoutExpired:
+        return jsonify({'logs': ['⏰ 获取日志超时，请稍后重试']})
+    except FileNotFoundError:
+        return jsonify({'logs': ['❌ Docker 或 Docker Compose 未安装']})
+    except Exception as e:
+        return jsonify({'logs': [f'❌ 获取日志时发生错误: {str(e)}']})
+
 @app.route('/api/sync', methods=['POST'])
 def trigger_sync():
     """触发文件同步"""
@@ -217,11 +286,11 @@ def docker_action(action):
     """Docker操作"""
     try:
         if action == 'up':
-            cmd = 'docker-compose up -d'
+            cmd = 'docker-compose -f docker/docker-compose.yml up -d'
         elif action == 'down':
-            cmd = 'docker-compose down'
+            cmd = 'docker-compose -f docker/docker-compose.yml down'
         elif action == 'restart':
-            cmd = 'docker-compose restart'
+            cmd = 'docker-compose -f docker/docker-compose.yml restart'
         else:
             return jsonify({'error': '不支持的操作'}), 400
         
@@ -340,7 +409,7 @@ def main():
 
     # 启动Flask-SocketIO服务器
     try:
-        socketio.run(app, host='0.0.0.0', port=api_port, debug=False)
+        socketio.run(app, host='0.0.0.0', port=api_port, debug=False, allow_unsafe_werkzeug=True)
     except OSError as e:
         print(f"❌ 启动失败: {e}", file=sys.stderr)
         if "Address already in use" in str(e):
