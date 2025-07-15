@@ -46,3 +46,6 @@ htmlcov/
 *.tar
 *.gz
 *.zip
+
+# 忽略 work 目录
+work/

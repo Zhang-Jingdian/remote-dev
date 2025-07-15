@@ -56,6 +56,7 @@ show_help() {
     echo "  down     停止容器"
     echo "  remote   进入容器"
     echo "  sync     同步文件"
+    echo "  pull     从远程拉取文件 [目标目录]"
     echo "  status   查看状态"
     echo "  logs     查看日志"
     echo "  test     运行测试"
@@ -64,7 +65,8 @@ show_help() {
     echo "  ./dev setup    # 初始化"
     echo "  ./dev dev      # 一键开发"
     echo "  ./dev remote   # 进入容器"
-    echo
+    echo "  ./dev pull ./        # 拉到当前目录"
+    echo "  ./dev pull work      # 拉到work目录(默认)"
 }
 
 # ================================================================================================
@@ -88,10 +90,52 @@ sync_files() {
         rsync_excludes="$rsync_excludes --exclude='$pattern'"
     done
     
+    # 尝试正常同步，如果失败则强制同步
     if eval rsync -av $rsync_excludes "./" "$REMOTE_HOST:$REMOTE_PATH/"; then
         print_success "文件同步完成"
     else
-        print_error "文件同步失败"
+        print_info "正常同步失败，尝试强制同步..."
+        if eval rsync -av --force --delete $rsync_excludes "./" "$REMOTE_HOST:$REMOTE_PATH/"; then
+            print_success "强制同步完成"
+        else
+            print_error "强制同步也失败，请检查远程文件权限"
+            print_info "建议手动处理: ssh $REMOTE_HOST 'chmod -R 755 $REMOTE_PATH'"
+            exit 1
+        fi
+    fi
+}
+
+# 从远程拉取文件
+pull_files() {
+    local target_dir="$1"
+    print_sync "从远程拉取文件..."
+    load_config
+    
+    local exclude_patterns=()
+    if [[ -n "${SYNC_EXCLUDE}" ]]; then
+        IFS=',' read -ra exclude_patterns <<< "${SYNC_EXCLUDE}"
+    else
+        exclude_patterns=('.git' 'node_modules' '__pycache__' '.venv' 'dist' '*.pyc' '*.log' '.DS_Store' '*.tmp' '.pytest_cache' 'coverage')
+    fi
+    
+    local rsync_excludes=""
+    for pattern in "${exclude_patterns[@]}"; do
+        rsync_excludes="$rsync_excludes --exclude='$pattern'"
+    done
+    
+    # 目标目录为空则用LOCAL_PATH
+    if [[ -z "$target_dir" ]]; then
+        target_dir="$LOCAL_PATH"
+    fi
+    
+    # 自动创建目标目录
+    mkdir -p "$target_dir"
+    
+    # 从远程拉取文件到本地目标目录
+    if eval rsync -av $rsync_excludes "$REMOTE_HOST:$REMOTE_PATH/" "$target_dir/"; then
+        print_success "文件拉取完成 (目标: $target_dir)"
+    else
+        print_error "文件拉取失败"
         exit 1
     fi
 }
@@ -198,14 +242,7 @@ remote_run() {
     sync_files
     
     if [[ "$command" == "bash" || "$command" == "sh" ]]; then
-        local bashrc_file=".remote_bashrc"
-        local interactive_command="cd $REMOTE_PATH && docker exec -it $CONTAINER_NAME bash -c \"
-if [ -f /workspace/docker/$bashrc_file ]; then
-    cp /workspace/docker/$bashrc_file /root/.bashrc
-fi
-cd /workspace
-bash --login
-\""
+        local interactive_command="cd $REMOTE_PATH && docker exec -it $CONTAINER_NAME bash"
         ssh -t "$REMOTE_HOST" "$interactive_command"
     else
         local remote_command="cd $REMOTE_PATH && docker exec -i $CONTAINER_NAME $command"
@@ -287,10 +324,36 @@ AUTO_SYNC=true
 HTTP_PROXY=socks5://127.0.0.1:7897
 HTTPS_PROXY=socks5://127.0.0.1:7897
 NO_PROXY=localhost,127.0.0.1
+
+# 权限管理配置
+AUTO_FIX_PERM=true
 EOF
         print_success "配置文件已创建: config.env"
     else
         print_success "配置文件已存在"
+    fi
+    
+    # 修正远程目录权限（可选）
+    if [[ "${AUTO_FIX_PERM:-true}" == "true" ]]; then
+        print_info "修正远程目录权限..."
+        load_config
+        
+        # 检查远程连接
+        if ping -c 1 "$REMOTE_HOST" >/dev/null 2>&1; then
+            # 尝试修正权限，优先使用当前用户权限，失败则使用777
+            if ssh "$REMOTE_HOST" "chmod -R u+rwX $REMOTE_PATH 2>/dev/null || chmod -R 777 $REMOTE_PATH"; then
+                print_success "远程目录权限已修正"
+                echo -e "${GRAY}💡 权限设置: 用户可读写执行${NC}"
+            else
+                print_error "远程目录权限修正失败"
+                echo -e "${YELLOW}💡 建议手动执行: ssh $REMOTE_HOST 'chmod -R 777 $REMOTE_PATH'${NC}"
+            fi
+        else
+            print_error "无法连接到远程主机 $REMOTE_HOST"
+            echo -e "${YELLOW}💡 请检查网络连接和远程主机配置${NC}"
+        fi
+    else
+        print_info "跳过远程权限修正 (AUTO_FIX_PERM=false)"
     fi
     
     # 安装命令别名
@@ -460,6 +523,7 @@ main() {
     case "${1:-help}" in
         setup)      setup_env ;;
         sync)       sync_files ;;
+        pull)       pull_files "$2" ;;
         up)         docker_up ;;
         down)       docker_down ;;
         status)     show_status ;;

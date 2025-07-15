@@ -22,8 +22,6 @@ alias npm='npm'
 
 # 项目相关
 alias dev='cd /workspace'
-alias status='docker ps'
-alias logs='docker logs -f remote-dev-env'
 
 # 环境变量
 export PYTHONPATH="/workspace:$PYTHONPATH"
@@ -32,6 +30,4 @@ export NODE_PATH="/workspace/node_modules:$NODE_PATH"
 # 欢迎信息
 echo "🚀 远程开发环境已就绪"
 echo "📁 工作目录: /workspace"
-echo "🐳 容器状态: $(docker ps --filter name=remote-dev-env --format 'table {{.Status}}' | tail -n +2)"
-echo "💡 提示: 使用 'dev' 命令查看帮助"
-echo "" 
+echo "💡 提示: 使用 'dev' 命令查看帮助" 
